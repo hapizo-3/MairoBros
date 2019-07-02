@@ -276,8 +276,11 @@ void DrawTitle() {
 	DrawRotaGraph( 28*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 22 ] , TRUE);
 	DrawRotaGraph( 29*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 14 ] , TRUE);
 
-
+	//ƒ^ƒCƒgƒ‹‰æ–Ê
 	DrawRotaGraph( 256, 134, 2.1f, 0, Pic.TitleImage[ 0 ] , TRUE );
+	
+	//‚ ‚¢‚¤‚¦‚¢
+	
 	if ( opt.Kflg & PAD_INPUT_10 ) {
 		GAMESTATE = GAME_INIT;
 	} else if ( opt.Kflg & PAD_INPUT_START ) {
