@@ -34,6 +34,8 @@ static int GAMESTATE;
 static int RefreshRate;
 HDC hdc;
 
+//aiueo
+
 /*****      ゲームモード列挙体      *****/
 typedef enum GAME_MODE {
 	GAME_TITLE,			//タイトル
