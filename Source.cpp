@@ -27,6 +27,10 @@
 #define _MAP_X		16
 #define _MAP_Y		14
 
+
+/*****		文字の大きさ		*****/
+#define _SIZE_STR	16
+
 //ゲーム状態変数
 static int GAMESTATE;
 
@@ -57,6 +61,8 @@ typedef enum GAME_MODE {
 typedef struct PICTURE {
 	int Player[ 15 ];
 	int StageBlock[ 10 ];
+	int TitleImage[ 1 ];
+	int StrImage[ 48 ];
 };
 PICTURE Pic;	//画像構造体宣言
 
@@ -230,12 +236,48 @@ static void FR_Wait( ) {
 void DrawTitle() {
 	int x;
 
-	x = 320 - GetDrawStringWidth( "MARIO", 5 );
-	DrawFormatString( x, 240, 0xff0000, "MARIO" );
+	DrawStage();
 
-	x = 320 - GetDrawStringWidth( "Push Space", 10 );
-	DrawFormatString( x, 400, 0xffffff, "Push Space" );
+	//マリオ
+	DrawRotaGraph( 3*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 22 ] , TRUE); 
+	DrawRotaGraph( 4*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 10 ] , TRUE);  
+	DrawRotaGraph( 5*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 27 ] , TRUE); 
+	DrawRotaGraph( 6*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 18 ] , TRUE); 
+	DrawRotaGraph( 7*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 24 ] , TRUE);
 
+	//得点
+	DrawRotaGraph( 3*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 0 ] , TRUE);
+	DrawRotaGraph( 4*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 0 ] , TRUE);
+	DrawRotaGraph( 5*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 0 ] , TRUE);
+	DrawRotaGraph( 6*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 0 ] , TRUE);
+	DrawRotaGraph( 7*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 0 ] , TRUE);
+	DrawRotaGraph( 8*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 0 ] , TRUE);
+
+	//コインの枚数
+	DrawRotaGraph( 12*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 37 ] , TRUE);
+	DrawRotaGraph( 13*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 0 ] , TRUE);
+	DrawRotaGraph( 14*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 0 ] , TRUE);
+
+	//ワールド
+	DrawRotaGraph( 18*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 32 ] , TRUE);
+	DrawRotaGraph( 19*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 24 ] , TRUE);
+	DrawRotaGraph( 20*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 27 ] , TRUE);
+	DrawRotaGraph( 21*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 21 ] , TRUE);
+	DrawRotaGraph( 22*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 13 ] , TRUE);
+
+	//ステージ
+	DrawRotaGraph( 19*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 1 ] , TRUE);
+	DrawRotaGraph( 20*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 36 ] , TRUE);
+	DrawRotaGraph( 21*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 1 ] , TRUE);
+
+	//タイム
+	DrawRotaGraph( 26*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 29 ] , TRUE);
+	DrawRotaGraph( 27*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 18 ] , TRUE);
+	DrawRotaGraph( 28*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 22 ] , TRUE);
+	DrawRotaGraph( 29*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 14 ] , TRUE);
+
+
+	DrawRotaGraph( 256, 134, 2.1f, 0, Pic.TitleImage[ 0 ] , TRUE );
 	if ( opt.Kflg & PAD_INPUT_10 ) {
 		GAMESTATE = GAME_INIT;
 	} else if ( opt.Kflg & PAD_INPUT_START ) {
@@ -344,6 +386,10 @@ void DrawPlayer() {
 
 int LoadImages() {
 
+	//タイトル画像読み込み
+	if ( ( Pic.TitleImage[0] = LoadGraph( "images/TitleImage01.png" ) ) == -1 ) return -1;
+	//タイトル文字読み込み
+	if ( LoadDivGraph( "images/font.png", 59, 10, 6, 16, 16, Pic.StrImage ) == -1 )	return -1;
 	//ブロック読込
 	if ( LoadDivGraph( "images/Block.png", 9, 9, 1, 32, 32, Pic.StageBlock + 1 ) == -1 )	return -1;
 	//キャラクター読込
