@@ -98,8 +98,9 @@ typedef struct PLAYER {
 	int PlayerX;
 	int PlayerY;
 	float PSpeed;
+	int JumpFrame;
 };
-PLAYER Player = { ( ( 2 * _MASS_X ) + _MASS_HALF ), ( 11 * _MASS_Y + _MASS_HALF ), 0 };
+PLAYER Player = { ( ( 2 * _MASS_X ) + _MASS_HALF ), ( 11 * _MASS_Y + _MASS_HALF ), 0, 0 };
 
 int Map[ _MAP_Y ][ _MAP_X ] = 
 	{	{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
@@ -114,8 +115,8 @@ int Map[ _MAP_Y ][ _MAP_X ] =
 		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
 		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
 		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
-		{  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0 },
-		{  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0 }		};
+		{  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8 },
+		{  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8 }		};
 
 /****************************************************/
 /*****											*****/
@@ -124,37 +125,64 @@ int Map[ _MAP_Y ][ _MAP_X ] =
 /****************************************************/
 
 //フレームレート制御関数
-static bool FR_Update( );
-static void FR_Draw( );
-static void FR_Wait( );
+static bool FR_Update( );	//フレームレート測定関数
+static void FR_Draw( );		//フレームレート描画関数
+static void FR_Wait( );		//待機処理関数
 
-void DrawTitle();
-void GameInit();
-void GameMain();
-void DrawEnd();
+//ゲームメイン処理系関数
+void GameInit();	//初期処理
+void GameMain();	//メイン処理
 
+//ゲームステート描画関数
+void DrawTitle();	//タイトル描画
+void DrawEnd();		//エンド画面描画
+
+//ゲームメイン画面描画系関数
 void DrawStage();	//ステージ描画
 void DrawPlayer();	//プレイヤー描画
+void DrawBlock();	//ブロック描画
+void DrawItem();	//アイテム描画
 
-int LoadImages();
+//読込処理関数
+int LoadImages();	//画像読込
+
+/****************************************************/
+/*****											*****/
+/*****				  メイン処理				*****/
+/*****											*****/
+/****************************************************/
 
 int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow ) {
 
+//デバッグモード時のウィンドウサイズ設定
+#ifdef _DEBUGMODE
+	const int _WINDOWSIZE_X = 700;
+	const int _WINDOWSIZE_Y = 448;
+#endif
+
+//デバッグモードなしの時のウィンドウサイズ設定
+#ifndef _DEBUGMODE
+	const int _WINDOWSIZE_X = 512;
+	const int _WINDOWSIZE_Y = 448;
+#endif
+
 	GAMESTATE = GAME_TITLE;
-	SetMainWindowText( "Aiueo" );
+	SetMainWindowText( "Super Mairo Bros" );					//ウィンドウテキスト変更
 
-	ChangeWindowMode( _WINDOWMODE );
-	SetGraphMode( 512, 448, 32 );
-	SetDrawScreen( DX_SCREEN_BACK );
-
-	/*****          リフレッシュレート確認            *****/
-	hdc = GetDC( GetMainWindowHandle() ) ;	// デバイスコンテキストの取得
+	ChangeWindowMode( _WINDOWMODE );							//ウィンドウモード変更
+	SetGraphMode( _WINDOWSIZE_X, _WINDOWSIZE_Y, 32 );			//ウィンドウサイズ変更
+	SetDrawScreen( DX_SCREEN_BACK );							//描画スクリーン変更
+	
+	/********************     リフレッシュレート確認     *************************/
+	hdc = GetDC( GetMainWindowHandle() ) ;			// デバイスコンテキストの取得
 	RefreshRate = GetDeviceCaps( hdc, VREFRESH ) ;	// リフレッシュレートの取得
-	ReleaseDC( GetMainWindowHandle(), hdc ) ;	// デバイスコンテキストの解放
+	ReleaseDC( GetMainWindowHandle(), hdc ) ;		// デバイスコンテキストの解放
+	/*****************************************************************************/
 
-	if ( DxLib_Init() == -1 )	return -1;
-	if ( LoadImages() == -1 )	return -1;
+	if ( DxLib_Init() == -1 )	return -1;		//Dxライブラリ初期化
+	if ( LoadImages() == -1 )	return -1;		//画像読込処理
 
+	/*************************     メインループ処理     **************************/
 	while ( ProcessMessage() == 0 && ClearDrawScreen() == 0 && GAMESTATE != 99 ) {
 	
 		opt.OldK = opt.NowK;
@@ -211,8 +239,8 @@ static bool FR_Update( ) {
 static void FR_Draw( ) {
 	
 	SetFontSize( _FONTSIZE_S );
-	DrawFormatString( 0, 0, 0xff0000, "%d", FR_Control.FrameCount );
-	DrawFormatString( 0, 20, 0xff0000, "%d", RefreshRate );
+	DrawFormatString( 516, 0, 0xff0000, "%d", FR_Control.FrameCount );
+	DrawFormatString( 516, 20, 0xff0000, "%d", RefreshRate );
 
 }
 
@@ -248,12 +276,14 @@ void DrawEnd() {
 	GAMESTATE = END;
 }
 
+//メイン初期処理
 void GameInit() {
 
 	GAMESTATE = GAME_MAIN;
 
 }
 
+//ゲームメイン処理
 void GameMain() {
 
 	DrawFormatString( 0, 0, 0xffffff, "MAIN" );
@@ -273,13 +303,16 @@ void DrawStage() {
 	DrawBox( 0, 0, 512, 448, 0x5080f8, TRUE );
 	
 	//ライン描画
-	for ( int StageX = 0; StageX < _MAP_X; StageX++ ) {
-		DrawLine( StageX * _MASS_X, 0, StageX * _MASS_X, 480, 0xffffff );
+#ifdef _DEBUGMODE
+	for ( int StageX = 0; StageX <= _MAP_X; StageX++ ) {
+		DrawLine( StageX * _MASS_X, 0, StageX * _MASS_X, 448, 0xffffff );
 	}
 	for ( int StageY = 0; StageY < _MAP_Y ; StageY++ ) {
-		DrawLine( 0, StageY * _MASS_Y, 640, StageY * _MASS_Y, 0xffffff );
+		DrawLine( 0, StageY * _MASS_Y, 512, StageY * _MASS_Y, 0xffffff );
 	}
+#endif
 
+	
 	for ( int StageY = 0; StageY < _MAP_Y; StageY++ ) {
 		for ( int StageX = 0; StageX < _MAP_X; StageX++ ) {
 			DrawRotaGraph( ( ( StageX * _MASS_X ) + _MASS_HALF ), ( ( StageY * _MASS_Y ) + _MASS_HALF ), 1.0f, 0, Pic.StageBlock[ Map[ StageY ][ StageX ] ], TRUE );
@@ -290,9 +323,6 @@ void DrawStage() {
 
 void DrawPlayer() {
 
-	//ジャンプ時のフレームカウント
-	static int JumpFrame = 0;
-
 	//動く処理
 	if ( Player.PlayerX <= ( 14 * _MASS_X + _MASS_HALF ) && opt.NowK & PAD_INPUT_RIGHT ) {
 		Player.PlayerX += ( 3 + ( int )Player.PSpeed );
@@ -302,22 +332,23 @@ void DrawPlayer() {
 
 	//重力処理
 
+
 	//ジャンプ処理
-	if( JumpFrame == 0 && opt.Kflg & PAD_INPUT_A ) {
-		JumpFrame++;
+	if( Player.JumpFrame == 0 && opt.Kflg & PAD_INPUT_A ) {
+		Player.JumpFrame++;
 	}
-	if ( JumpFrame > 0 ) {
-		if ( JumpFrame < 64 ) {
-			JumpFrame += 1;
+	if ( Player.JumpFrame > 0 ) {
+		if ( Player.JumpFrame < 64 ) {
+			Player.JumpFrame += 1;
 			Player.PlayerY -= 2;
 		}
-		if ( JumpFrame >= 64 ) {
-			JumpFrame += 1;
+		if ( Player.JumpFrame >= 64 ) {
+			Player.JumpFrame += 1;
 			Player.PlayerY += 2;
 		}
 
-		if ( JumpFrame == 127 ) {
-			JumpFrame = 0;
+		if ( Player.JumpFrame == 127 ) {
+			Player.JumpFrame = 0;
 		}
 	}
 
@@ -334,14 +365,15 @@ void DrawPlayer() {
 	//}
 
 #ifdef _DEBUGMODE
-	DrawFormatString( 0, 50, 0xff0000, "%d", opt.OldK );
-	DrawFormatString( 0, 80, 0xff0000, "%d", opt.NowK );
+	DrawFormatString( 516, 50, 0xff0000, "%d", opt.OldK );
+	DrawFormatString( 516, 80, 0xff0000, "%d", opt.NowK );
 #endif
-
+	//プレイヤー描画
 	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[ 0 ], TRUE );
 
 }
 
+//画像読込
 int LoadImages() {
 
 	//ブロック読込
