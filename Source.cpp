@@ -254,6 +254,7 @@ void DrawTitle() {
 	DrawRotaGraph( 8*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 0 ] , TRUE);
 
 	//ÉRÉCÉìÇÃñáêî
+	DrawRotaGraph( 11*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 50 ] , TRUE);
 	DrawRotaGraph( 12*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 37 ] , TRUE);
 	DrawRotaGraph( 13*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 0 ] , TRUE);
 	DrawRotaGraph( 14*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 0 ] , TRUE);
