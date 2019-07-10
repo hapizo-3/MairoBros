@@ -57,6 +57,7 @@ typedef enum GAME_MODE {
 typedef struct PICTURE {
 	int Player[ 15 ];
 	int StageBlock[ 10 ];
+	int P_Walk[ 4 ];
 };
 PICTURE Pic;	//画像構造体宣言
 
@@ -99,6 +100,8 @@ typedef struct PLAYER {
 	int PlayerY;
 	float PSpeed;
 	int JumpFrame;
+	int P_i_f;
+	int P_lr_f;
 };
 PLAYER Player = { ( ( 2 * _MASS_X ) + _MASS_HALF ), ( 11 * _MASS_Y + _MASS_HALF ), 0, 0 };
 
@@ -323,6 +326,24 @@ void DrawStage() {
 
 void DrawPlayer() {
 
+	if(0==FR_Control.FrameCount%4 && opt.NowK!=NULL){
+		Player.P_i_f++;
+		if(Player.P_i_f==4)Player.P_i_f=0;
+	}
+	if(opt.NowK==NULL){
+		Player.P_i_f=0;
+	}
+
+	if ( Player.PlayerX <= ( 14 * _MASS_X + _MASS_HALF ) && opt.NowK & PAD_INPUT_RIGHT ) {
+		Player.PlayerX += ( 1 + Player.PSpeed );
+		Player.P_lr_f=0;
+		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE );
+	} else if ( Player.PlayerX >= ( 2 * _MASS_X + _MASS_HALF ) && opt.NowK & PAD_INPUT_LEFT ) {
+		Player.PlayerX -= ( 1 + Player.PSpeed );
+		Player.P_lr_f=1;
+		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE,TRUE );
+	}
+
 	//動く処理
 	if ( Player.PlayerX <= ( 14 * _MASS_X + _MASS_HALF ) && opt.NowK & PAD_INPUT_RIGHT ) {
 		Player.PlayerX += ( 3 + ( int )Player.PSpeed );
@@ -368,8 +389,10 @@ void DrawPlayer() {
 	DrawFormatString( 516, 50, 0xff0000, "%d", opt.OldK );
 	DrawFormatString( 516, 80, 0xff0000, "%d", opt.NowK );
 #endif
-	//プレイヤー描画
-	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[ 0 ], TRUE );
+
+	if(Player.P_lr_f==0&&opt.NowK==NULL)DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0,Pic.Player[0], TRUE ,FALSE);
+	if(Player.P_lr_f==1&&opt.NowK==NULL)DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[0], TRUE ,TRUE);
+	//DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[ 0 ], TRUE );//プレイヤー描画
 
 }
 
@@ -380,6 +403,11 @@ int LoadImages() {
 	if ( LoadDivGraph( "images/Block.png", 9, 9, 1, 32, 32, Pic.StageBlock + 1 ) == -1 )	return -1;
 	//キャラクター読込
 	if ( LoadDivGraph( "images/mario_chara.png", 15, 5, 3, 32, 32, Pic.Player ) == -1 )	return -1;
+
+	Pic.P_Walk[0]=Pic.Player[1];
+	Pic.P_Walk[1]=Pic.Player[2];
+	Pic.P_Walk[2]=Pic.Player[3];
+	Pic.P_Walk[3]=Pic.Player[2];
 
 	return TRUE;
 }
