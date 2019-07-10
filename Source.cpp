@@ -294,8 +294,13 @@ void DrawStage() {
 
 void DrawPlayer() {
 
-	
-
+	if(0==FR_Control.FrameCount%4 && opt.NowK!=NULL){
+		Player.P_i_f++;
+		if(Player.P_i_f==4)Player.P_i_f=0;
+	}
+	if(opt.NowK==NULL){
+		Player.P_i_f=0;
+	}
 
 	if ( Player.PlayerX <= ( 14 * _MASS_X + _MASS_HALF ) && opt.NowK & PAD_INPUT_RIGHT ) {
 		Player.PlayerX += ( 1 + Player.PSpeed );
@@ -421,8 +426,9 @@ int LoadImages() {
 	//キャラクター読込
 	if ( LoadDivGraph( "images/mario_chara.png", 15, 5, 3, 32, 32, Pic.Player ) == -1 )	return -1;
 	Pic.P_Walk[0]=Pic.Player[1];
-
-
+	Pic.P_Walk[1]=Pic.Player[2];
+	Pic.P_Walk[2]=Pic.Player[3];
+	Pic.P_Walk[3]=Pic.Player[2];
 
 	return TRUE;
 }
