@@ -22,10 +22,13 @@
 #define _MASS_X		32
 #define _MASS_Y		32
 #define _MASS_HALF	16
+#define _MASS_ENEMY_HALF	24
 
 /*****		マップの高さ		*****/
 #define _MAP_X		16
 #define _MAP_Y		14
+//敵のＹ軸の高さ
+#define _MAP_ENEMY 48
 
 
 /*****		文字の大きさ		*****/
@@ -62,7 +65,8 @@ typedef struct PICTURE {
 	int Player[ 15 ];
 	int StageBlock[ 10 ];
 	int TitleImage[ 1 ];
-	int StrImage[ 48 ];
+	int StrImage[ 60 ];
+	int Enemy[20];
 };
 PICTURE Pic;	//画像構造体宣言
 
@@ -105,7 +109,16 @@ typedef struct PLAYER {
 	int PlayerY;
 	float PSpeed;
 };
-PLAYER Player = { ( ( 2 * _MASS_X ) + _MASS_HALF ), ( 11 * _MASS_Y + _MASS_HALF ), 0 };
+PLAYER Player = { ( ( 2 * _MASS_X ) + _MASS_HALF ), ( 12 * _MASS_Y - _MASS_HALF ), 0 };
+
+/*****		エネミー構造体		*****/
+typedef struct ENEMY {
+	int EnemyX;
+	int EnemyY;
+	float ESpeed;
+};
+ENEMY Enemy = { ( Player.PlayerX + (8 * _MASS_X ) + _MASS_HALF ), ( 12 * _MASS_Y - _MASS_ENEMY_HALF ), 0 };
+
 
 int Map[ _MAP_Y ][ _MAP_X ] = 
 	{	{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
@@ -141,13 +154,14 @@ void DrawEnd();
 
 void DrawStage();	//ステージ描画
 void DrawPlayer();	//プレイヤー描画
+void DrawEnemy();	//エネミー描画
 
 int LoadImages();
 
 int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow ) {
 
 	GAMESTATE = GAME_TITLE;
-	SetMainWindowText( "Aiueo" );
+	SetMainWindowText( "Maria" );
 
 	ChangeWindowMode( _WINDOWMODE );
 	SetGraphMode( 512, 448, 32 );
@@ -161,7 +175,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	if ( DxLib_Init() == -1 )	return -1;
 	if ( LoadImages() == -1 )	return -1;
 
-	while ( ProcessMessage() == 0 && ClearDrawScreen() == 0 && GAMESTATE != 99 ) {
+	while ( ProcessMessage() == 0 && ClearDrawScreen() == 0 && GAMESTATE != 99 && !(opt.Kflg & PAD_INPUT_START)) {
 	
 		opt.OldK = opt.NowK;
 		opt.NowK = GetJoypadInputState( DX_INPUT_KEY_PAD1 );
@@ -234,7 +248,6 @@ static void FR_Wait( ) {
 
 //タイトル描画
 void DrawTitle() {
-	int x;
 
 	DrawStage();
 
@@ -280,7 +293,7 @@ void DrawTitle() {
 	//タイトル画面
 	DrawRotaGraph( 256, 134, 2.1f, 0, Pic.TitleImage[ 0 ] , TRUE );
 	
-	//あいうえい
+	//タイトル判定
 	
 	if ( opt.Kflg & PAD_INPUT_10 ) {
 		GAMESTATE = GAME_INIT;
@@ -294,18 +307,21 @@ void DrawEnd() {
 	GAMESTATE = END;
 }
 
+//ゲーム初期処理
 void GameInit() {
 
 	GAMESTATE = GAME_MAIN;
 
 }
 
+//ゲームメイン
 void GameMain() {
 
 	DrawFormatString( 0, 0, 0xffffff, "MAIN" );
 
 	DrawStage();		//ステージ描画
 	DrawPlayer();		//プレイヤー描画
+	DrawEnemy();		//エネミー描画
 
 	if ( opt.Kflg & PAD_INPUT_10 ) {
 		GAMESTATE = GAME_TITLE;
@@ -331,9 +347,9 @@ void DrawStage() {
 			DrawRotaGraph( ( ( StageX * _MASS_X ) + _MASS_HALF ), ( ( StageY * _MASS_Y ) + _MASS_HALF ), 1.0f, 0, Pic.StageBlock[ Map[ StageY ][ StageX ] ], TRUE );
 		}
 	}
-
 }
 
+//プレイヤー描画処理
 void DrawPlayer() {
 
 	//ジャンプ時のフレームカウント
@@ -388,16 +404,25 @@ void DrawPlayer() {
 
 }
 
+void DrawEnemy(){
+
+
+	DrawRotaGraph( Enemy.EnemyX, Enemy.EnemyY, 1.0f, 0, Pic.Enemy[ 0 ], TRUE );
+}
+
+
 int LoadImages() {
 
-	//タイトル画像読み込み
+	//タイトル読込
 	if ( ( Pic.TitleImage[0] = LoadGraph( "images/TitleImage01.png" ) ) == -1 ) return -1;
-	//タイトル文字読み込み
-	if ( LoadDivGraph( "images/font.png", 59, 10, 6, 16, 16, Pic.StrImage ) == -1 )	return -1;
+	//タイトル文字読込
+	if ( LoadDivGraph( "images/font.png", 60, 10, 6, 16, 16, Pic.StrImage ) == -1 )	return -1;
 	//ブロック読込
 	if ( LoadDivGraph( "images/Block.png", 9, 9, 1, 32, 32, Pic.StageBlock + 1 ) == -1 )	return -1;
 	//キャラクター読込
 	if ( LoadDivGraph( "images/mario_chara.png", 15, 5, 3, 32, 32, Pic.Player ) == -1 )	return -1;
+	//エネミー読込
+	if ( LoadDivGraph( "images/mob.png", 20, 10, 2, 32, 48, Pic.Enemy ) == -1 )	return -1;
 
 	return TRUE;
 }
