@@ -96,12 +96,12 @@ MAP map;
 
 /*****		プレイヤー構造体		*****/
 typedef struct PLAYER {
-	int PlayerX;
-	int PlayerY;
-	float PSpeed;
-	int JumpFrame;
-	int P_i_f;
-	int P_lr_f;
+	int PlayerX;	//プレイヤー座標X
+	int PlayerY;	//プレイヤー座標Y
+	float PSpeed;	//プレイヤースピード
+	int JumpFrame;	//ジャンプフレーム
+	int P_i_f;		//歩行フレーム
+	int P_lr_f;		//歩行方向変数
 };
 PLAYER Player = { ( ( 2 * _MASS_X ) + _MASS_HALF ), ( 11 * _MASS_Y + _MASS_HALF ), 0, 0 };
 
@@ -267,7 +267,7 @@ void DrawTitle() {
 	x = 320 - GetDrawStringWidth( "Push Space", 10 );
 	DrawFormatString( x, 400, 0xffffff, "Push Space" );
 
-	if ( opt.Kflg & PAD_INPUT_10 ) {
+	if ( opt.Kflg & PAD_INPUT_M ) {
 		GAMESTATE = GAME_INIT;
 	} else if ( opt.Kflg & PAD_INPUT_START ) {
 		GAMESTATE = GAME_END;
@@ -294,7 +294,7 @@ void GameMain() {
 	DrawStage();		//ステージ描画
 	DrawPlayer();		//プレイヤー描画
 
-	if ( opt.Kflg & PAD_INPUT_10 ) {
+	if ( opt.Kflg & PAD_INPUT_START ) {
 		GAMESTATE = GAME_TITLE;
 	}
 }
@@ -326,36 +326,37 @@ void DrawStage() {
 
 void DrawPlayer() {
 
-	if(0==FR_Control.FrameCount%4 && opt.NowK!=NULL){
+	int PDrawMode = 0;
+
+	//歩くアニメーション
+	if( ( 0 == FR_Control.FrameCount % 4 ) && opt.NowK != NULL ){
 		Player.P_i_f++;
 		if(Player.P_i_f==4)Player.P_i_f=0;
 	}
-	if(opt.NowK==NULL){
-		Player.P_i_f=0;
+	if( opt.NowK == NULL ){
+		Player.P_i_f = 0;	//キー操作をやめた時
 	}
 
-	if ( Player.PlayerX <= ( 14 * _MASS_X + _MASS_HALF ) && opt.NowK & PAD_INPUT_RIGHT ) {
-		Player.PlayerX += ( 1 + Player.PSpeed );
+	//歩行処理
+	//右
+	if ( Player.PlayerX <= ( 15 * _MASS_X + _MASS_HALF ) && ( opt.NowK & PAD_INPUT_RIGHT || opt.NowK & PAD_INPUT_Z ) ) {
+		PDrawMode = 1;
+		Player.PlayerX += ( 3 + Player.PSpeed );
 		Player.P_lr_f=0;
-		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE );
-	} else if ( Player.PlayerX >= ( 2 * _MASS_X + _MASS_HALF ) && opt.NowK & PAD_INPUT_LEFT ) {
-		Player.PlayerX -= ( 1 + Player.PSpeed );
+		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, FALSE );		//歩行時のプレイヤー描画
+	}//左
+	else if ( Player.PlayerX >= ( 0 * _MASS_X + _MASS_HALF ) && ( opt.NowK & PAD_INPUT_LEFT || opt.NowK & PAD_INPUT_X ) ) {
+		PDrawMode = 1;
+		Player.PlayerX -= ( 3 + Player.PSpeed );
 		Player.P_lr_f=1;
-		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE,TRUE );
-	}
-
-	//動く処理
-	if ( Player.PlayerX <= ( 14 * _MASS_X + _MASS_HALF ) && opt.NowK & PAD_INPUT_RIGHT ) {
-		Player.PlayerX += ( 3 + ( int )Player.PSpeed );
-	} else if ( Player.PlayerX >= ( 2 * _MASS_X + _MASS_HALF ) && opt.NowK & PAD_INPUT_LEFT ) {
-		Player.PlayerX -= ( 3 + ( int )Player.PSpeed );
+		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, TRUE );	//歩行時のプレイヤー描画
 	}
 
 	//重力処理
 
 
 	//ジャンプ処理
-	if( Player.JumpFrame == 0 && opt.Kflg & PAD_INPUT_A ) {
+	if( Player.JumpFrame == 0 && opt.Kflg & PAD_INPUT_M ) {
 		Player.JumpFrame++;
 	}
 	if ( Player.JumpFrame > 0 ) {
@@ -386,13 +387,14 @@ void DrawPlayer() {
 	//}
 
 #ifdef _DEBUGMODE
-	DrawFormatString( 516, 50, 0xff0000, "%d", opt.OldK );
-	DrawFormatString( 516, 80, 0xff0000, "%d", opt.NowK );
+	DrawFormatString( 516,  50, 0xff0000, "OldK = %d", opt.OldK );		//OldK描画
+	DrawFormatString( 516,  80, 0xff0000, "NowK = %d", opt.NowK );		//NowK描画
+	DrawFormatString( 516, 110, 0xff0000, "PdrM = %d", PDrawMode );		//PDrawMode描画
+	DrawFormatString( 516, 140, 0xff0000, "LR_F = %d", Player.P_lr_f );	//P_lr_f描画
 #endif
 
-	if(Player.P_lr_f==0&&opt.NowK==NULL)DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0,Pic.Player[0], TRUE ,FALSE);
-	if(Player.P_lr_f==1&&opt.NowK==NULL)DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[0], TRUE ,TRUE);
-	//DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[ 0 ], TRUE );//プレイヤー描画
+	//無動作時のプレイヤー描画
+	if ( PDrawMode == 0 )	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[0], TRUE , Player.P_lr_f );
 
 }
 
