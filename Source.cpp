@@ -117,7 +117,7 @@ typedef struct ENEMY {
 	int EnemyY;
 	float ESpeed;
 };
-ENEMY Enemy = { ( Player.PlayerX + (8 * _MASS_X ) + _MASS_HALF ), ( 12 * _MASS_Y - _MASS_ENEMY_HALF ), 0 };
+ENEMY Enemy = { ( Player.PlayerX + (15 * _MASS_X ) + _MASS_HALF ), ( 12 * _MASS_Y - _MASS_ENEMY_HALF ), 0 };
 
 
 int Map[ _MAP_Y ][ _MAP_X ] = 
@@ -404,10 +404,19 @@ void DrawPlayer() {
 
 }
 
+//エネミー描画処理
 void DrawEnemy(){
 
+	//動く処理
+	//if ( Player.PlayerX <= ( 14 * _MASS_X + _MASS_HALF ) && opt.NowK & PAD_INPUT_RIGHT ) {
+	//	Player.PlayerX += ( 3 + ( int )Player.PSpeed );
+	//}
 
-	DrawRotaGraph( Enemy.EnemyX, Enemy.EnemyY, 1.0f, 0, Pic.Enemy[ 0 ], TRUE );
+	//描画
+	if( Enemy.EnemyX != ( 1 * _MASS_X + _MASS_HALF )) {
+		Enemy.EnemyX --;
+		DrawRotaGraph( Enemy.EnemyX, Enemy.EnemyY, 1.0f, 0, Pic.Enemy[ 0 ], TRUE );
+	}
 }
 
 
