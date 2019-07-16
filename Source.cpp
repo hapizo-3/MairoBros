@@ -93,11 +93,13 @@ OPERATE opt;
 
 /*****		  マップ構造体		*****/
 typedef struct MAP {
-	int MapNum;
-	int DrawFlg;
-	int BreakFlg;
+	int MapNum;		//マップナンバー
+	int DrawFlg;	//DrawGraphするときにつかうやつ
+	int BreakFlg;	//壊れた判定するやつ
+	int CoX;		//ブロックのX座標
+	int CoY;		//ブロックのY座標
 };
-MAP map[ _MAP_Y ][ _MAP_X ];
+MAP map[ _MAP_ALLSIZE_Y ][ _MAP_ALLSIZE_X ];
 
 /*****		プレイヤー構造体		*****/
 typedef struct PLAYER {
@@ -107,7 +109,8 @@ typedef struct PLAYER {
 	int JumpFrame;	//ジャンプフレーム
 	int P_i_f;		//歩行フレーム
 	int P_lr_f;		//歩行方向変数
-	int MapScrollX;
+	int MapScrollX;	//マップスクロールするのに必要なやつ
+	int Scroll;		//マップスクロールの現在量
 };
 PLAYER Player = { ( ( 2 * _MASS_X ) + _MASS_HALF ), ( 11 * _MASS_Y + _MASS_HALF ), 0, 0 };
 
@@ -159,7 +162,7 @@ void DrawBlock();	//ブロック描画
 void DrawItem();	//アイテム描画
 
 //マリオ処理系関数
-int HitBlock();
+int HitBlock();		//ブロック当たり判定
 
 //読込処理関数
 int LoadImages();	//画像読込
@@ -259,6 +262,7 @@ static void FR_Draw( ) {
 	SetFontSize( _FONTSIZE_S );
 	DrawFormatString( 516, 0, 0xff0000, "%d", FR_Control.FrameCount );
 	DrawFormatString( 516, 20, 0xff0000, "%d", RefreshRate );
+	DrawFormatString( 570, 0, 0xff0000, "%.1f", FR_Control.mFps );
 
 }
 
@@ -297,16 +301,14 @@ void DrawEnd() {
 //メイン初期処理
 void GameInit() {
 
+	MapInit();
+
 	GAMESTATE = GAME_MAIN;
 
 }
 
 //ゲームメイン処理
 void GameMain() {
-
-	MapInit();
-
-	DrawFormatString( 0, 0, 0xffffff, "MAIN" );
 
 	DrawStage();		//ステージ描画
 	DrawPlayer();		//プレイヤー描画
@@ -333,18 +335,33 @@ void DrawStage() {
 #endif
 
 	//マップ描画
-	for ( int StageY = 0; StageY < _MAP_Y; StageY++ ) {
+	/*for ( int StageY = 0; StageY < _MAP_Y; StageY++ ) {
 		for ( int StageX = 0; StageX < _MAP_X; StageX++ ) {
 			DrawRotaGraph( ( ( StageX * _MASS_X ) + _MASS_HALF ), ( ( StageY * _MASS_Y ) + _MASS_HALF ), 
 								1.0f, 0, Pic.StageBlock[ map[ StageY ][ StageX ].MapNum ], TRUE );
+		}
+	}*/
+
+	//マップ描画
+	for ( int StageY = 0; StageY < _MAP_ALLSIZE_Y; StageY++ ) {
+		for ( int StageX = 0; StageX < _MAP_ALLSIZE_X; StageX++ ) {
+			DrawRotaGraph( map[ StageY ][ StageX ].CoX + _MASS_HALF, map[ StageY ][ StageX ].CoY + _MASS_HALF,
+								1.0f, 0, Pic.StageBlock[ map[ StageY ][ StageX ].MapNum ], TRUE );
+		}
+	}
+
+	for ( int StageY = 0; StageY < _MAP_ALLSIZE_Y; StageY++ ) {
+		for ( int StageX = 0; StageX < _MAP_ALLSIZE_X; StageX++ ) {
+			map[ StageY ][ StageX ].CoX -= Player.MapScrollX;
 		}
 	}
 
 }
 
+//プレイヤー描画
 void DrawPlayer() {
 
-	int PDrawMode = 0;
+	int PDrawMode = 0;	//0=動いてない、1 = 動いている(左右キー入力が入ってる)
 	int JumpMode = 0;
 
 	//歩くアニメーション
@@ -357,19 +374,43 @@ void DrawPlayer() {
 	}
 
 	//歩行処理
-	//右
-	if ( Player.PlayerX <= ( 15 * _MASS_X + _MASS_HALF ) && ( opt.NowK & PAD_INPUT_RIGHT || opt.NowK & PAD_INPUT_Z ) ) {
-		PDrawMode = 1;
-		Player.PlayerX += ( 3 + Player.PSpeed );
-		Player.P_lr_f=0;
+	/*****     右移動処理     *****/
+	if ( Player.PlayerX <= ( 6 * _MASS_X + _MASS_HALF ) && ( opt.NowK & PAD_INPUT_RIGHT || opt.NowK & PAD_INPUT_Z ) ) {
+		PDrawMode = 1;						//動いてるかいないかの処理
+		//加速度設定
+		if ( Player.PSpeed < 4.0f ) {
+			Player.PSpeed += 0.2f;
+		}
+		Player.PlayerX += Player.PSpeed;	//プレイヤー移動
+		Player.P_lr_f=0;					//左右反転フラグ
+		if ( Player.PlayerX >= 6  * _MASS_X + _MASS_HALF ) {
+			Player.PlayerX -= Player.PSpeed;
+			Player.MapScrollX = Player.PSpeed;
+		}
+
 		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, FALSE );		//歩行時のプレイヤー描画
-	}//左
+	}
+	/*****     左移動処理     *****/
 	else if ( Player.PlayerX >= ( 0 * _MASS_X + _MASS_HALF ) && ( opt.NowK & PAD_INPUT_LEFT || opt.NowK & PAD_INPUT_X ) ) {
-		PDrawMode = 1;
-		Player.PlayerX -= ( 3 + Player.PSpeed );
-		Player.P_lr_f=1;
-		Player.MapScrollX += 3;
-		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, TRUE );	//歩行時のプレイヤー描画
+		PDrawMode = 1;						//動いてるかいないかの処理
+		if ( Player.PSpeed < 4.0f ) {
+			Player.PSpeed += 0.2f;			//加速度設定
+		}
+		Player.PlayerX -= Player.PSpeed;	//プレイヤー移動
+		Player.P_lr_f=1;					//左右反転フラグ
+		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, TRUE );			//歩行時のプレイヤー描画
+	}
+	else {
+		if ( Player.PSpeed >= 0.0f ) {
+			Player.PSpeed -= 0.4f;
+			if ( Player.P_lr_f == 0 && ( Player.PlayerX < 5 * _MASS_X + _MASS_HALF ) ) { 
+				Player.PlayerX += Player.PSpeed;
+			} 
+			else if ( Player.P_lr_f == 1 && ( Player.PlayerX > 0 * _MASS_X + _MASS_HALF ) ) {
+				Player.PlayerX -= Player.PSpeed;
+			}
+		}
+		Player.MapScrollX = 0;
 	}
 
 	//重力処理
@@ -437,9 +478,13 @@ int LoadImages() {
 }
 
 void MapInit() {
-	for ( int StageY = 0; StageY < _MAP_Y; StageY++ ) {
-		for ( int StageX = 0; StageX < _MAP_X; StageX++ ) {
+	for ( int StageY = 0; StageY < _MAP_ALLSIZE_Y; StageY++ ) {
+		for ( int StageX = 0; StageX < _MAP_ALLSIZE_X; StageX++ ) {
 			map[ StageY ][ StageX ].MapNum = Map[ StageY ][ StageX ];
+			map[ StageY ][ StageX ].CoX = StageX * _MASS_X;
+			map[ StageY ][ StageX ].CoY = StageY * _MASS_Y;
+			map[ StageY ][ StageX ].DrawFlg = TRUE;
+			map[ StageY ][ StageX ].BreakFlg = FALSE;
 		}
 	}
 }
