@@ -67,7 +67,16 @@ PICTURE Pic;	//画像構造体宣言
 
 /*****      サウンド構造体      *****/
 typedef struct SOUND {
-	int Sound;
+	int StageBGM;
+	int MetroBGM;
+	
+	int OneUpSE;
+	int AlertSE;
+	int CoinSE;
+	int DeathSE;
+	int JumpSE;
+	int LevelUpSE;
+	int StepOnSE;
 };
 SOUND Sound;		//音楽構造体宣言
 
@@ -166,6 +175,7 @@ int HitBlock();		//ブロック当たり判定
 
 //読込処理関数
 int LoadImages();	//画像読込
+int LoadSound();	//サウンド読込
 
 /****************************************************/
 /*****											*****/
@@ -202,6 +212,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 	if ( DxLib_Init() == -1 )	return -1;		//Dxライブラリ初期化
 	if ( LoadImages() == -1 )	return -1;		//画像読込処理
+	if ( LoadSound() == -1 )	return -1;		//サウンド読み込み処理 
 
 	/*************************     メインループ処理     **************************/
 	while ( ProcessMessage() == 0 && ClearDrawScreen() == 0 && GAMESTATE != 99 ) {
@@ -309,6 +320,11 @@ void GameInit() {
 
 //ゲームメイン処理
 void GameMain() {
+
+	//ステージサウンド
+	if(CheckSoundMem( Sound.StageBGM ) == 0){
+		PlaySoundMem( Sound.StageBGM , DX_PLAYTYPE_BACK);
+	}
 
 	DrawStage();		//ステージ描画
 	DrawPlayer();		//プレイヤー描画
@@ -418,6 +434,7 @@ void DrawPlayer() {
 
 	//ジャンプ処理
 	if( Player.JumpFrame == 0 && opt.Kflg & PAD_INPUT_M ) {
+		PlaySoundMem(Sound.JumpSE , DX_PLAYTYPE_BACK);
 		Player.JumpFrame++;
 	}
 	if ( Player.JumpFrame > 0 ) {
@@ -475,6 +492,33 @@ int LoadImages() {
 	Pic.P_Walk[3]=Pic.Player[2];
 
 	return TRUE;
+}
+
+//サウンド読込
+int LoadSound() {
+
+	/*****	BGM	*****/
+	//ステージBGM読込
+	if (( Sound.StageBGM = LoadSoundMem("sounds/Stage.mp3")) == -1) return -1;
+	//地下BGM読込
+	if (( Sound.MetroBGM = LoadSoundMem("sounds/Metro.mp3")) == -1) return -1;
+
+	/*****	SE	*****/
+	//アラートSE読込
+	if (( Sound.AlertSE = LoadSoundMem("sounds/Alert.mp3")) == -1) return -1;
+	//コイン取得SE読込
+	if (( Sound.CoinSE = LoadSoundMem("sounds/Coin.mp3")) == -1) return -1;
+	//死SE読込
+	if (( Sound.DeathSE = LoadSoundMem("sounds/Death.mp3")) == -1) return -1;
+	//ジャンプSE読込
+	if (( Sound.JumpSE = LoadSoundMem("sounds/Jump.mp3")) == -1) return -1;
+	//レベルアップSE読込
+	if (( Sound.LevelUpSE = LoadSoundMem("sounds/LevelUp.mp3")) == -1) return -1;
+	//１アップSE読込
+	if (( Sound.OneUpSE = LoadSoundMem("sounds/OneUp.mp3")) == -1) return -1;
+	//敵踏SE読込
+	if (( Sound.StepOnSE = LoadSoundMem("sounds/StepOn.mp3")) == -1) return -1;
+
 }
 
 void MapInit() {
