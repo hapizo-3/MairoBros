@@ -391,13 +391,13 @@ void DrawPlayer() {
 	//歩行処理
 	/*****     右移動処理     *****/
 	if ( Player.PlayerX <= ( 6 * _MASS_X + _MASS_HALF ) && ( opt.NowK & PAD_INPUT_RIGHT || opt.NowK & PAD_INPUT_Z ) ) {
-		PDrawMode = 1;						//動いてるかいないかの処理
+		PDrawMode = 1;								//動いてるかいないかの判定
 		//加速度設定
 		if ( Player.PSpeed < 4.0f ) {
 			Player.PSpeed += 0.2f;
 		}
-		Player.PlayerX += ( int )Player.PSpeed;	//プレイヤー移動
-		Player.P_lr_f=0;					//左右反転フラグ
+		Player.PlayerX += ( int )Player.PSpeed;		//プレイヤー移動
+		Player.P_lr_f=0;							//左右反転フラグ
 		if ( Player.PlayerX >= 6 * _MASS_X + _MASS_HALF ) {
 			Player.PlayerX -= ( int )Player.PSpeed;
 			Player.MapScrollX = ( int )Player.PSpeed;
@@ -417,7 +417,7 @@ void DrawPlayer() {
 		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, TRUE );			//歩行時のプレイヤー描画
 	} 
 	else {		//止まったときの処理
-		if ( Player.PSpeed >= 0.0f ) {
+		if ( Player.PSpeed > 0.0f ) {
 			Player.PSpeed -= 0.2f;
 			Player.MapScrollX = ( int )Player.PSpeed;
 			if ( Player.P_lr_f == 0 && ( Player.PlayerX < 5 * _MASS_X + _MASS_HALF ) ) { 
@@ -431,14 +431,13 @@ void DrawPlayer() {
 	}
 
 	//重力処理
-	/*int Hit = 0;
-	if ( JumpMode != 1 && ( HitBlockDown( Player.PlayerX, Player.PlayerY ) == FALSE ) ) {
+	//int Hit = 0;
+	if ( /*JumpMode != 1 &&*/ ( HitBlockUp( Player.PlayerX, Player.PlayerY ) == TRUE ) ) {
 		if ( Player.P_FallSpeed <= 4.0f ) {
 			Player.P_FallSpeed += 0.4f;
 		}
 		Player.PlayerY += Player.P_FallSpeed;
-	}*/
-	
+	}
 
 	//ジャンプ処理
 	if( Player.JumpFrame == 0 && opt.Kflg & PAD_INPUT_M ) {
