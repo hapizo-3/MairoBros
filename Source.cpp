@@ -362,11 +362,11 @@ void DrawStage() {
 		}
 	}
 
-	for ( int StageY = 0; StageY < _MAP_ALLSIZE_Y; StageY++ ) {
+	/*for ( int StageY = 0; StageY < _MAP_ALLSIZE_Y; StageY++ ) {
 		for ( int StageX = 0; StageX < _MAP_ALLSIZE_X; StageX++ ) {
 			map[ StageY ][ StageX ].CoX -= Player.MapScrollX;
 		}
-	}
+	}*/
 
 #ifdef _DEBUGMODE
 	DrawCircle( ( Player.PlayerX / 32 ) * _MASS_X + _MASS_HALF, ( ( Player.PlayerY / 32 ) - 1 ) * _MASS_Y + _MASS_HALF, 2, 0xff00ff, TRUE );
@@ -392,14 +392,14 @@ void DrawPlayer() {
 
 	//•àsˆ—
 	//‰E
-	if ( Player.PlayerX <= ( 10 * _MASS_X + _MASS_HALF ) && ( opt.NowK & PAD_INPUT_RIGHT || opt.NowK & PAD_INPUT_Z ) ) {
+	if ( Player.PlayerX <= ( 15 * _MASS_X + _MASS_HALF ) && ( opt.NowK & PAD_INPUT_RIGHT || opt.NowK & PAD_INPUT_Z ) ) {
 		PDrawMode = 1;
 		if ( Player.PSpeed < 4.0f ) {
 			Player.PSpeed += 0.2f;
 			/*Player.MapScrollX = Player.PSpeed;*/
 		}
 
-		if(Map[Player.PlayerY/32][(Player.PlayerX/32)+1]==0)	Player.PlayerX += Player.PSpeed;
+		if(map[Player.PlayerY/32][(Player.PlayerX/32)+1].MapNum==0)	Player.PlayerX += Player.PSpeed;
 		if(Player.JumpFrame==0)Player.P_lr_f=0;
 		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, Player.P_lr_f );		//•àsŽž‚ÌƒvƒŒƒCƒ„[•`‰æ
 		
@@ -408,9 +408,8 @@ void DrawPlayer() {
 		PDrawMode = 1;
 		if ( Player.PSpeed < 4.0f ) {
 			Player.PSpeed += 0.2f;
-			Player.MapScrollX = Player.PSpeed;
 		}
-		Player.PlayerX -= Player.PSpeed;
+		if(map[Player.PlayerY/32][(Player.PlayerX/32)-1].MapNum==0)	Player.PlayerX -= Player.PSpeed;
 		if(Player.JumpFrame==0)Player.P_lr_f=1;
 		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, Player.P_lr_f );	//•àsŽž‚ÌƒvƒŒƒCƒ„[•`‰æ
 	}
@@ -438,40 +437,40 @@ void DrawPlayer() {
 		case 1:
 			Player.JumpFrame += 1;
 			Player.PlayerY -= 9;
-			if(Map[((Player.PlayerY)/32)-1][(Player.PlayerX/32)]!=0)Player.JumpFrame=36;
+			if(map[((Player.PlayerY)/32)-1][(Player.PlayerX/32)].MapNum!=0)Player.JumpFrame=36;
 			break;
 		case 2:
 			Player.JumpFrame += 1;
 			Player.PlayerY -= 5;
-			if(Map[Player.PlayerY/32-1][(Player.PlayerX/32)]!=0)Player.JumpFrame=30;
+			if(map[Player.PlayerY/32-1][(Player.PlayerX/32)].MapNum!=0)Player.JumpFrame=30;
 			break;
 		case 3:
 			Player.JumpFrame += 1;
 			Player.PlayerY -= 3;
-			if(Map[Player.PlayerY/32-1][(Player.PlayerX/32)]!=0)Player.JumpFrame=24;
+			if(map[Player.PlayerY/32-1][(Player.PlayerX/32)].MapNum!=0)Player.JumpFrame=24;
 			break;
 		case 4:
 			Player.JumpFrame += 1;
 			Player.PlayerY += 3;
-			if(Map[((Player.PlayerY-16)/32)+1][(Player.PlayerX/32)]!=0)Player.JumpFrame=0;
+			if(map[((Player.PlayerY-16)/32)+1][(Player.PlayerX/32)].MapNum!=0)Player.JumpFrame=0;
 			break;
 		case 5:
 			Player.JumpFrame += 1;
 			Player.PlayerY += 5;
-			if(Map[((Player.PlayerY-16)/32)+1][(Player.PlayerX/32)]!=0)Player.JumpFrame=0;
+			if(map[((Player.PlayerY-16)/32)+1][(Player.PlayerX/32)].MapNum!=0)Player.JumpFrame=0;
 			break;
 		case 6:
 			Player.JumpFrame += 1;
 			Player.PlayerY += 9;
-			if(Map[((Player.PlayerY-16)/32)+1][(Player.PlayerX/32)]!=0)Player.JumpFrame=0;
-			if(Map[((Player.PlayerY-16)/32)+1][(Player.PlayerX/32)]==0)Player.JumpFrame=36;
+			if(map[((Player.PlayerY-16)/32)+1][(Player.PlayerX/32)].MapNum!=0)Player.JumpFrame=0;
+			if(map[((Player.PlayerY-16)/32)+1][(Player.PlayerX/32)].MapNum==0)Player.JumpFrame=36;
 			break;
 		default:
 			break;
 		}
 	}
-	if(0!=Player.PlayerY%16 && Player.JumpFrame==0)Player.PlayerY=(Player.PlayerY/16)*16;
-	if(Map[((Player.PlayerY-16)/32)+1][(Player.PlayerX/32)]==0 && Player.JumpFrame==0)Player.JumpFrame=24;
+	if(0!=Player.PlayerY%16 && Player.JumpFrame==0)	Player.PlayerY=(Player.PlayerY/16)*16;
+	if(map[((Player.PlayerY-16)/32)+1][(Player.PlayerX/32)].MapNum==0 && Player.JumpFrame==0)Player.JumpFrame=24;
 
 #ifdef _DEBUGMODE
 	DrawFormatString( 516,  50, 0xff0000, "OldK = %d", opt.OldK );		//OldK•`‰æ
@@ -480,7 +479,8 @@ void DrawPlayer() {
 	DrawFormatString( 516, 140, 0xff0000, "LR_F = %d", Player.P_lr_f );	//P_lr_f•`‰æ
 	DrawFormatString( 516, 170, 0xff0000, "PlrX = %d", Player.PlayerX );//PlayerX•`‰æ
 	DrawFormatString( 516, 200, 0xff0000, "PlrY = %d", Player.PlayerY );	//PlayerY•`‰æ
-	DrawFormatString( 516, 230, 0xff0000, "PlayerY = %d", Player.PlayerY );	//P_lr_f•`‰æ
+	DrawFormatString( 516, 240, 0xff0000, "CoX  = %d", map[ 10 ][ 1 ].CoX );//CoX•`‰æ
+	DrawFormatString( 516, 280, 0xff0000, "CoY  = %d", map[ 10 ][ 1 ].CoY );//CoY•`‰æ
 	DrawCircle(Player.PlayerX,Player.PlayerY,3,0x0000ff);
 #endif
 
