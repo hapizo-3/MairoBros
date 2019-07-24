@@ -1,0 +1,42 @@
+//v1_B_07_24
+//歩行処理
+	/*****     右移動処理     *****/
+	if ( Player.PlayerX <= ( 6 * _MASS_X + _MASS_HALF ) && ( opt.NowK & PAD_INPUT_RIGHT || opt.NowK & PAD_INPUT_Z ) ) {
+		PDrawMode = 1;								//動いてるかいないかの判定
+		//加速度設定
+		if ( Player.PSpeed < 4.0f ) {
+			Player.PSpeed += 0.2f;
+		}
+		Player.PlayerX += ( int )Player.PSpeed;		//プレイヤー移動
+		Player.P_lr_f=0;							//左右反転フラグ
+		if ( Player.PlayerX >= 6 * _MASS_X + _MASS_HALF ) {
+			Player.PlayerX -= ( int )Player.PSpeed;
+			Player.MapScrollX = ( int )Player.PSpeed;
+		}
+
+		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, FALSE );		//歩行時のプレイヤー描画
+	}
+	/*****     左移動処理     *****/
+	else if ( Player.PlayerX >= ( 0 * _MASS_X + _MASS_HALF ) && ( opt.NowK & PAD_INPUT_LEFT || opt.NowK & PAD_INPUT_X )  ) {
+		PDrawMode = 1;						//動いてるかいないかの処理
+		if ( Player.PSpeed < 4.0f ) {
+			Player.PSpeed -= 0.2f;			//加速度設定
+		}
+		Player.MapScrollX = 0;
+		Player.PlayerX += ( int )Player.PSpeed;	//プレイヤー移動
+		
+		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, TRUE );			//歩行時のプレイヤー描画
+	} 
+	else {		//止まったときの処理
+		if ( Player.PSpeed > 0.0f ) {
+			Player.PSpeed -= 0.2f;
+			Player.MapScrollX = ( int )Player.PSpeed;
+			if ( Player.P_lr_f == 0 && ( Player.PlayerX < 5 * _MASS_X + _MASS_HALF ) ) { 
+				Player.PlayerX += ( int )Player.PSpeed;
+			} 
+			else if ( Player.P_lr_f == 1 && ( Player.PlayerX > 0 * _MASS_X + _MASS_HALF ) ) {
+				Player.PlayerX += ( int )Player.PSpeed;
+			}
+		}
+		//Player.MapScrollX = 0;
+	}

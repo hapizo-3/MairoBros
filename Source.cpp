@@ -116,6 +116,7 @@ typedef struct PLAYER {
 	int JumpFrame;	//ジャンプフレーム
 	int P_i_f;		//歩行フレーム
 	int P_lr_f;		//歩行方向変数
+	int JF_f;		//ジャンプフレームのやつ
 	int MapScrollX;	//マップスクロールするのに必要なやつ
 	int Scroll;		//マップスクロールの現在量
 };
@@ -381,96 +382,96 @@ void DrawPlayer() {
 
 	//歩くアニメーション
 	if( ( 0 == FR_Control.FrameCount % 4 ) && opt.NowK != NULL ){
-		Player.P_i_f++;
-		if(Player.P_i_f==4)Player.P_i_f=0;
+		if(Player.JumpFrame==0)Player.P_i_f++;
+		if(Player.P_i_f>=3 &&Player.JumpFrame==0)Player.P_i_f=0;
+		if(Player.JumpFrame>0)Player.P_i_f=3;
 	}
 	if( opt.NowK == NULL ){
 		Player.P_i_f = 0;	//キー操作をやめた時
 	}
 
 	//歩行処理
-	/*****     右移動処理     *****/
-	if ( Player.PlayerX <= ( 6 * _MASS_X + _MASS_HALF ) && ( opt.NowK & PAD_INPUT_RIGHT || opt.NowK & PAD_INPUT_Z ) ) {
-		PDrawMode = 1;								//動いてるかいないかの判定
-		//加速度設定
+	//右
+	if ( Player.PlayerX <= ( 10 * _MASS_X + _MASS_HALF ) && ( opt.NowK & PAD_INPUT_RIGHT || opt.NowK & PAD_INPUT_Z ) ) {
+		PDrawMode = 1;
 		if ( Player.PSpeed < 4.0f ) {
 			Player.PSpeed += 0.2f;
-		}
-		Player.PlayerX += ( int )Player.PSpeed;		//プレイヤー移動
-		Player.P_lr_f=0;							//左右反転フラグ
-		if ( Player.PlayerX >= 6 * _MASS_X + _MASS_HALF ) {
-			Player.PlayerX -= ( int )Player.PSpeed;
-			Player.MapScrollX = ( int )Player.PSpeed;
+			/*Player.MapScrollX = Player.PSpeed;*/
 		}
 
-		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, FALSE );		//歩行時のプレイヤー描画
-	}
-	/*****     左移動処理     *****/
-	else if ( Player.PlayerX >= ( 0 * _MASS_X + _MASS_HALF ) && ( opt.NowK & PAD_INPUT_LEFT || opt.NowK & PAD_INPUT_X )  ) {
-		PDrawMode = 1;						//動いてるかいないかの処理
-		if ( Player.PSpeed < 4.0f ) {
-			Player.PSpeed -= 0.2f;			//加速度設定
-		}
-		Player.MapScrollX = 0;
-		Player.PlayerX += ( int )Player.PSpeed;	//プレイヤー移動
+		if(Map[Player.PlayerY/32][(Player.PlayerX/32)+1]==0)	Player.PlayerX += Player.PSpeed;
+		if(Player.JumpFrame==0)Player.P_lr_f=0;
+		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, Player.P_lr_f );		//歩行時のプレイヤー描画
 		
-		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, TRUE );			//歩行時のプレイヤー描画
-	} 
-	else {		//止まったときの処理
-		if ( Player.PSpeed > 0.0f ) {
+	}//左
+	else if ( Player.PlayerX >= ( 0 * _MASS_X + _MASS_HALF ) && ( opt.NowK & PAD_INPUT_LEFT || opt.NowK & PAD_INPUT_X ) ) {
+		PDrawMode = 1;
+		if ( Player.PSpeed < 4.0f ) {
+			Player.PSpeed += 0.2f;
+			Player.MapScrollX = Player.PSpeed;
+		}
+		Player.PlayerX -= Player.PSpeed;
+		if(Player.JumpFrame==0)Player.P_lr_f=1;
+		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, Player.P_lr_f );	//歩行時のプレイヤー描画
+	}
+	/*else if ( Player.PSpeed > 0.0f ) {
 			Player.PSpeed -= 0.2f;
-			Player.MapScrollX = ( int )Player.PSpeed;
-			if ( Player.P_lr_f == 0 && ( Player.PlayerX < 5 * _MASS_X + _MASS_HALF ) ) { 
-				Player.PlayerX += ( int )Player.PSpeed;
-			} 
-			else if ( Player.P_lr_f == 1 && ( Player.PlayerX > 0 * _MASS_X + _MASS_HALF ) ) {
-				Player.PlayerX += ( int )Player.PSpeed;
-			}
-		}
-		//Player.MapScrollX = 0;
-	}
+			Player.MapScrollX = Player.PSpeed;
+	}*/
 
-	//重力処理
-	//int Hit = 0;
-	if ( /*JumpMode != 1 &&*/ ( HitBlockUp( Player.PlayerX, Player.PlayerY ) == TRUE ) ) {
-		if ( Player.P_FallSpeed <= 4.0f ) {
-			Player.P_FallSpeed += 0.4f;
-		}
-		Player.PlayerY += Player.P_FallSpeed;
-	}
-
-	//ジャンプ処理
+	/*****     ジャンプ処理     *****/
 	if( Player.JumpFrame == 0 && opt.Kflg & PAD_INPUT_M ) {
 		Player.JumpFrame++;
-		JumpMode = 1;
 	}
 	if ( Player.JumpFrame > 0 ) {
-		if ( Player.JumpFrame < 64 ) {
-			Player.JumpFrame += 1;
-			Player.PlayerY -= 2;
-		}
-		if ( Player.JumpFrame >= 64 ) {
-			Player.JumpFrame += 1;
-			Player.PlayerY += 2;
-		}
-
-		if ( Player.JumpFrame == 127 ) {
+		if ( Player.JumpFrame < 12 )Player.JF_f=1;
+		else if ( Player.JumpFrame < 18 )Player.JF_f=2;
+		else if ( Player.JumpFrame < 24 )Player.JF_f=3;
+		else if ( Player.JumpFrame < 30 )Player.JF_f=4;
+		else if ( Player.JumpFrame < 36 )Player.JF_f=5;
+		else if ( Player.JumpFrame < 47 )Player.JF_f=6;
+		if ( Player.JumpFrame == 47 ) {
 			Player.JumpFrame = 0;
-
+		}
+		switch (Player.JF_f)
+		{
+		case 1:
+			Player.JumpFrame += 1;
+			Player.PlayerY -= 9;
+			if(Map[((Player.PlayerY)/32)-1][(Player.PlayerX/32)]!=0)Player.JumpFrame=36;
+			break;
+		case 2:
+			Player.JumpFrame += 1;
+			Player.PlayerY -= 5;
+			if(Map[Player.PlayerY/32-1][(Player.PlayerX/32)]!=0)Player.JumpFrame=30;
+			break;
+		case 3:
+			Player.JumpFrame += 1;
+			Player.PlayerY -= 3;
+			if(Map[Player.PlayerY/32-1][(Player.PlayerX/32)]!=0)Player.JumpFrame=24;
+			break;
+		case 4:
+			Player.JumpFrame += 1;
+			Player.PlayerY += 3;
+			if(Map[((Player.PlayerY-16)/32)+1][(Player.PlayerX/32)]!=0)Player.JumpFrame=0;
+			break;
+		case 5:
+			Player.JumpFrame += 1;
+			Player.PlayerY += 5;
+			if(Map[((Player.PlayerY-16)/32)+1][(Player.PlayerX/32)]!=0)Player.JumpFrame=0;
+			break;
+		case 6:
+			Player.JumpFrame += 1;
+			Player.PlayerY += 9;
+			if(Map[((Player.PlayerY-16)/32)+1][(Player.PlayerX/32)]!=0)Player.JumpFrame=0;
+			if(Map[((Player.PlayerY-16)/32)+1][(Player.PlayerX/32)]==0)Player.JumpFrame=36;
+			break;
+		default:
+			break;
 		}
 	}
-
-	//加速度設定
-	//if ( opt.OldK != 0 ) {
-	//	if ( Player.PSpeed <= 2.0f ) {
-	//		Player.PSpeed += 0.1f;
-	//	}
-	//} 
-	//if ( opt.OldK == 0 && Player.PSpeed >= 0.0f ) {
-	//	if ( Player.PSpeed > 0.0f ) {
-	//		Player.PSpeed -= 0.03f;
-	//	}
-	//}
+	if(0!=Player.PlayerY%16 && Player.JumpFrame==0)Player.PlayerY=(Player.PlayerY/16)*16;
+	if(Map[((Player.PlayerY-16)/32)+1][(Player.PlayerX/32)]==0 && Player.JumpFrame==0)Player.JumpFrame=24;
 
 #ifdef _DEBUGMODE
 	DrawFormatString( 516,  50, 0xff0000, "OldK = %d", opt.OldK );		//OldK描画
@@ -479,11 +480,13 @@ void DrawPlayer() {
 	DrawFormatString( 516, 140, 0xff0000, "LR_F = %d", Player.P_lr_f );	//P_lr_f描画
 	DrawFormatString( 516, 170, 0xff0000, "PlrX = %d", Player.PlayerX );//PlayerX描画
 	DrawFormatString( 516, 200, 0xff0000, "PlrY = %d", Player.PlayerY );	//PlayerY描画
+	DrawFormatString( 516, 230, 0xff0000, "PlayerY = %d", Player.PlayerY );	//P_lr_f描画
+	DrawCircle(Player.PlayerX,Player.PlayerY,3,0x0000ff);
 #endif
 
 	//無動作時のプレイヤー描画
-	if ( PDrawMode == 0 )	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[0], TRUE , Player.P_lr_f );
-
+	if ( PDrawMode == 0  && Player.JumpFrame==0)	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[0], TRUE , Player.P_lr_f );
+	if ( PDrawMode == 0  && Player.JumpFrame!=0)	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[4], TRUE , Player.P_lr_f );
 }
 
 //画像読込
