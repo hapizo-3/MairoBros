@@ -178,22 +178,25 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 //デバッグモード時のウィンドウサイズ設定
 #ifdef _DEBUGMODE
-	const int _WINDOWSIZE_X = 700;
-	const int _WINDOWSIZE_Y = 448;
+	const int _WINDOWSIZE_X = 900;
+	const int _WINDOWSIZE_Y = 648;
 #endif
 
 //デバッグモードなしの時のウィンドウサイズ設定
 #ifndef _DEBUGMODE
-	const int _WINDOWSIZE_X = 512;
-	const int _WINDOWSIZE_Y = 448;
+	const int _WINDOWSIZE_X = 712;
+	const int _WINDOWSIZE_Y = 648;
 #endif
 
 	GAMESTATE = GAME_TITLE;
 	SetMainWindowText( "Super Mairo Bros" );					//ウィンドウテキスト変更
+	SetGraphMode( _WINDOWSIZE_X, _WINDOWSIZE_Y, 32 );			//ウィンドウサイズ変更
 
 	ChangeWindowMode( _WINDOWMODE );							//ウィンドウモード変更
-	SetGraphMode( _WINDOWSIZE_X, _WINDOWSIZE_Y, 32 );			//ウィンドウサイズ変更
-	SetDrawScreen( DX_SCREEN_BACK );							//描画スクリーン変更
+	if ( DxLib_Init() == -1 )	return -1;		//Dxライブラリ初期化
+	int offscreen_handle = MakeScreen( 512, 448, FALSE );
+	
+	SetDrawScreen( offscreen_handle );							//描画スクリーン変更
 	
 	/********************     リフレッシュレート確認     *************************/
 	hdc = GetDC( GetMainWindowHandle() ) ;			// デバイスコンテキストの取得
@@ -201,15 +204,19 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	ReleaseDC( GetMainWindowHandle(), hdc ) ;		// デバイスコンテキストの解放
 	/*****************************************************************************/
 
-	if ( DxLib_Init() == -1 )	return -1;		//Dxライブラリ初期化
 	if ( LoadImages() == -1 )	return -1;		//画像読込処理
 
 	/*************************     メインループ処理     **************************/
 	while ( ProcessMessage() == 0 && ClearDrawScreen() == 0 && GAMESTATE != 99 ) {
 	
+
+		SetDrawScreen( offscreen_handle );
+
 		opt.OldK = opt.NowK;
 		opt.NowK = GetJoypadInputState( DX_INPUT_KEY_PAD1 );
 		opt.Kflg = opt.NowK & ~opt.OldK;
+
+		
 
 		switch( GAMESTATE ) {
 
@@ -228,9 +235,11 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 		}
 	
 		FR_Update();
-		#ifdef _DEBUGMODE
+#ifdef _DEBUGMODE
 			FR_Draw();
-		#endif
+#endif
+		SetDrawScreen( DX_SCREEN_BACK );
+		DrawExtendGraph( 0, 0, _WINDOWSIZE_X - 188, _WINDOWSIZE_Y, offscreen_handle, FALSE );
 		ScreenFlip();
 		FR_Wait();
 
@@ -495,7 +504,7 @@ int LoadImages() {
 	Pic.P_Walk[0]=Pic.Player[1];
 	Pic.P_Walk[1]=Pic.Player[2];
 	Pic.P_Walk[2]=Pic.Player[3];
-	Pic.P_Walk[3]=Pic.Player[2];
+	Pic.P_Walk[3]=Pic.Player[4];
 
 	return TRUE;
 }
@@ -512,9 +521,3 @@ void MapInit() {
 		}
 	}
 }
-
-//int HitBlock() {
-//
-//	if ( Player.PlayerX
-//
-//}
