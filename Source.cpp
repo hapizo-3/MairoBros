@@ -111,7 +111,7 @@ int Map[ _MAP_Y ][ _MAP_X ] =
 		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
 		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
 		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
-		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
+		{  0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
 		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
 		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
 		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
@@ -343,14 +343,14 @@ void DrawPlayer() {
 	//右
 	if ( Player.PlayerX <= ( 15 * _MASS_X + _MASS_HALF ) && ( opt.NowK & PAD_INPUT_RIGHT || opt.NowK & PAD_INPUT_Z ) ) {
 		PDrawMode = 1;
-		if(Map[Player.PlayerY/32][(Player.PlayerX/32)+1]==0)Player.PlayerX += ( 3 + Player.PSpeed );
+		if(Map[Player.PlayerY/32][((Player.PlayerX-16)/32)+1]==0)Player.PlayerX += ( 3 + Player.PSpeed );
 		if(Player.JumpFrame==0)Player.P_lr_f=0;
 		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, Player.P_lr_f );		//歩行時のプレイヤー描画
 		
 	}//左
 	else if ( Player.PlayerX >= ( 0 * _MASS_X + _MASS_HALF ) && ( opt.NowK & PAD_INPUT_LEFT || opt.NowK & PAD_INPUT_X ) ) {
 		PDrawMode = 1;
-		Player.PlayerX -= ( 3 + Player.PSpeed );
+		if(Map[Player.PlayerY/32][((Player.PlayerX+16)/32)-1]==0)Player.PlayerX -= ( 3 + Player.PSpeed );
 		if(Player.JumpFrame==0)Player.P_lr_f=1;
 		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, Player.P_lr_f );	//歩行時のプレイヤー描画
 	}
@@ -377,17 +377,17 @@ void DrawPlayer() {
 		case 1:
 			Player.JumpFrame += 1;
 			Player.PlayerY -= 9;
-			if(Map[((Player.PlayerY)/32)-1][(Player.PlayerX/32)]!=0)Player.JumpFrame=36;
+			if(Map[((Player.PlayerY+16)/32)-1][(Player.PlayerX/32)]!=0)Player.JumpFrame=36;
 			break;
 		case 2:
 			Player.JumpFrame += 1;
 			Player.PlayerY -= 5;
-			if(Map[Player.PlayerY/32-1][(Player.PlayerX/32)]!=0)Player.JumpFrame=30;
+			if(Map[(Player.PlayerY+16)/32-1][(Player.PlayerX/32)]!=0)Player.JumpFrame=30;
 			break;
 		case 3:
 			Player.JumpFrame += 1;
 			Player.PlayerY -= 3;
-			if(Map[Player.PlayerY/32-1][(Player.PlayerX/32)]!=0)Player.JumpFrame=24;
+			if(Map[(Player.PlayerY+16)/32-1][(Player.PlayerX/32)]!=0)Player.JumpFrame=24;
 			break;
 		case 4:
 			Player.JumpFrame += 1;
