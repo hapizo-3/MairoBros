@@ -109,6 +109,7 @@ typedef struct PLAYER {
 	int JumpFrame;	//ジャンプフレーム
 	int P_i_f;		//歩行フレーム
 	int P_lr_f;		//歩行方向変数
+	int JF_f;
 	int MapScrollX;	//マップスクロールするのに必要なやつ
 	int Scroll;		//マップスクロールの現在量
 };
@@ -133,7 +134,7 @@ int Map[ _MAP_ALLSIZE_Y ][ _MAP_ALLSIZE_X ] =
 	};
 
 //当たり判定のあるマップナンバー
-int HitBlockNum[ 20 ] = { 1, 2, 3, 4, 5, 6, 7 , 8, 9 };
+int HitBlockNum[ 20 ] = { 1, 2, 3, 4, 5, 6, 7 , 8, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 /****************************************************/
 /*****											*****/
@@ -366,8 +367,9 @@ void DrawPlayer() {
 
 	//歩くアニメーション
 	if( ( 0 == FR_Control.FrameCount % 4 ) && opt.NowK != NULL ){
-		Player.P_i_f++;
-		if(Player.P_i_f==4)Player.P_i_f=0;
+		if ( Player.JumpFrame == 0 )	Player.P_i_f++;
+		if(Player.P_i_f >= 3 && Player.JumpFrame == 0 )	Player.P_i_f=0;
+		if ( Player.JumpFrame > 0 )	Player.P_i_f = 3;
 	}
 	if( opt.NowK == NULL ){
 		Player.P_i_f = 0;	//キー操作をやめた時
@@ -413,27 +415,60 @@ void DrawPlayer() {
 		Player.MapScrollX = 0;
 	}
 
-	//重力処理
-	
-
 	//ジャンプ処理
 	if( Player.JumpFrame == 0 && opt.Kflg & PAD_INPUT_M ) {
 		Player.JumpFrame++;
 	}
 	if ( Player.JumpFrame > 0 ) {
-		if ( Player.JumpFrame < 64 ) {
-			Player.JumpFrame += 1;
-			Player.PlayerY -= 2;
-		}
-		if ( Player.JumpFrame >= 64 ) {
-			Player.JumpFrame += 1;
-			Player.PlayerY += 2;
-		}
-
-		if ( Player.JumpFrame == 127 ) {
+		if ( Player.JumpFrame < 12 )	Player.JF_f = 1;
+		else if ( Player.JumpFrame < 18 )	Player.JF_f = 2;
+		else if ( Player.JumpFrame < 24 )	Player.JF_f = 3;
+		else if ( Player.JumpFrame < 30 )	Player.JF_f = 4;
+		else if ( Player.JumpFrame < 36 )	Player.JF_f = 5;
+		else if ( Player.JumpFrame < 47 )	Player.JF_f = 6;
+		if ( Player.JumpFrame == 47 ) {
 			Player.JumpFrame = 0;
 		}
+
+		switch ( Player.JF_f )
+		{
+			case 1:
+				Player.JumpFrame += 1;
+				Player.PlayerY -= 9;
+				if ( map[ ( Player.PlayerY / 32 ) - 1 ][ ( Player.PlayerX / 32 ) ].MapNum != 0 )	Player.JumpFrame = 36;
+				break;
+			case 2:
+				Player.JumpFrame += 1;
+				Player.PlayerY -= 5;
+				if ( map[ ( Player.PlayerY / 32 ) - 1 ][ ( Player.PlayerX / 32 ) ].MapNum != 0 )	Player.JumpFrame = 30;
+				break;
+			case 3:
+				Player.JumpFrame += 1;
+				Player.PlayerY -= 3;
+				if ( map[ ( Player.PlayerY / 32 ) - 1 ][ ( Player.PlayerX / 32 ) ].MapNum != 0 )	Player.JumpFrame = 24;
+				break;
+			case 4:
+				Player.JumpFrame += 1;
+				Player.PlayerY += 3;
+				if ( map[ ( ( Player.PlayerY - 16 ) / 32 ) + 1 ][ ( Player.PlayerX / 32 ) ].MapNum != 0 )	Player.JumpFrame=0;
+				break;
+			case 5:
+				Player.JumpFrame += 1;
+				Player.PlayerY += 5;
+				if ( map[ ( ( Player.PlayerY - 16 ) / 32 ) + 1 ][ ( Player.PlayerX / 32 ) ].MapNum != 0 )	Player.JumpFrame=0;
+				break;
+			case 6:
+				Player.JumpFrame += 1;
+				Player.PlayerY += 9;
+				if ( map[ ( ( Player.PlayerY - 16 ) / 32 ) + 1][ ( Player.PlayerX / 32 ) ].MapNum != 0 )	Player.JumpFrame=0;
+				if ( map[ ( ( Player.PlayerY - 16 ) / 32 ) + 1][ ( Player.PlayerX / 32 ) ].MapNum == 0 )	Player.JumpFrame=36;
+				break;
+			default:
+				break;
+		}
 	}
+	if ( 0 != Player.PlayerY % 16 && Player.JumpFrame == 0 )	Player.PlayerY = ( Player.PlayerY / 16 ) * 16;
+	if ( map[ ( ( Player.PlayerY - 16 ) / 32 ) + 1 ][ ( Player.PlayerX / 32 ) ].MapNum == 0 && Player.JumpFrame == 0 )	Player.JumpFrame = 24;
 
 	//加速度設定
 	//if ( opt.OldK != 0 ) {
@@ -457,8 +492,8 @@ void DrawPlayer() {
 #endif
 
 	//無動作時のプレイヤー描画
-	if ( PDrawMode == 0 )	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[0], TRUE , Player.P_lr_f );
-
+	if ( PDrawMode == 0 && Player.JumpFrame == 0 )	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[0], TRUE , Player.P_lr_f );
+	if ( PDrawMode == 0 && Player.JumpFrame != 0 )	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[4], TRUE , Player.P_lr_f );
 }
 
 //画像読込
