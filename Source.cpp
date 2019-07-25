@@ -362,11 +362,11 @@ void DrawStage() {
 		}
 	}
 
-	/*for ( int StageY = 0; StageY < _MAP_ALLSIZE_Y; StageY++ ) {
+	for ( int StageY = 0; StageY < _MAP_ALLSIZE_Y; StageY++ ) {
 		for ( int StageX = 0; StageX < _MAP_ALLSIZE_X; StageX++ ) {
 			map[ StageY ][ StageX ].CoX -= Player.MapScrollX;
 		}
-	}*/
+	}
 
 #ifdef _DEBUGMODE
 	DrawCircle( ( Player.PlayerX / 32 ) * _MASS_X + _MASS_HALF, ( ( Player.PlayerY / 32 ) - 1 ) * _MASS_Y + _MASS_HALF, 2, 0xff00ff, TRUE );
@@ -399,7 +399,12 @@ void DrawPlayer() {
 			/*Player.MapScrollX = Player.PSpeed;*/
 		}
 
-		if(map[Player.PlayerY/32][(Player.PlayerX/32)+1].MapNum==0)	Player.PlayerX += Player.PSpeed;
+		if(map[Player.PlayerY/32][(Player.PlayerX/32)+1].MapNum==0)	Player.PlayerX += Player.PSpeed;	//プレイヤー移動
+		Player.P_lr_f=0;					//左右反転フラグ
+		if ( Player.PlayerX >= 6  * _MASS_X + _MASS_HALF ) {
+			Player.PlayerX -= Player.PSpeed;
+			Player.MapScrollX = Player.PSpeed;
+		}
 		if(Player.JumpFrame==0)Player.P_lr_f=0;
 		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, Player.P_lr_f );		//歩行時のプレイヤー描画
 		
@@ -413,10 +418,18 @@ void DrawPlayer() {
 		if(Player.JumpFrame==0)Player.P_lr_f=1;
 		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, Player.P_lr_f );	//歩行時のプレイヤー描画
 	}
-	/*else if ( Player.PSpeed > 0.0f ) {
-			Player.PSpeed -= 0.2f;
-			Player.MapScrollX = Player.PSpeed;
-	}*/
+	else {
+		if ( Player.PSpeed >= 0.0f ) {
+			Player.PSpeed -= 0.4f;
+			if ( Player.P_lr_f == 0 && ( Player.PlayerX < 5 * _MASS_X + _MASS_HALF ) ) { 
+				Player.PlayerX += Player.PSpeed;
+			} 
+			else if ( Player.P_lr_f == 1 && ( Player.PlayerX > 0 * _MASS_X + _MASS_HALF ) ) {
+				Player.PlayerX -= Player.PSpeed;
+			}
+		}
+		Player.MapScrollX = 0;
+	}
 
 	/*****     ジャンプ処理     *****/
 	if( Player.JumpFrame == 0 && opt.Kflg & PAD_INPUT_M ) {
