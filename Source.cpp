@@ -470,18 +470,6 @@ void DrawPlayer() {
 	if ( 0 != Player.PlayerY % 16 && Player.JumpFrame == 0 )	Player.PlayerY = ( Player.PlayerY / 16 ) * 16;
 	if ( map[ ( ( Player.PlayerY - 16 ) / 32 ) + 1 ][ ( Player.PlayerX / 32 ) ].MapNum == 0 && Player.JumpFrame == 0 )	Player.JumpFrame = 24;
 
-	//加速度設定
-	//if ( opt.OldK != 0 ) {
-	//	if ( Player.PSpeed <= 2.0f ) {
-	//		Player.PSpeed += 0.1f;
-	//	}
-	//} 
-	//if ( opt.OldK == 0 && Player.PSpeed >= 0.0f ) {
-	//	if ( Player.PSpeed > 0.0f ) {
-	//		Player.PSpeed -= 0.03f;
-	//	}
-	//}
-
 #ifdef _DEBUGMODE
 	DrawFormatString( 516,  50, 0xff0000, "OldK = %d", opt.OldK );		//OldK描画
 	DrawFormatString( 516,  80, 0xff0000, "NowK = %d", opt.NowK );		//NowK描画
@@ -512,6 +500,7 @@ int LoadImages() {
 	return TRUE;
 }
 
+//マップ初期処理
 void MapInit() {
 	for ( int StageY = 0; StageY < _MAP_ALLSIZE_Y; StageY++ ) {
 		for ( int StageX = 0; StageX < _MAP_ALLSIZE_X; StageX++ ) {
