@@ -58,7 +58,7 @@ typedef enum GAME_MODE {
 
 /*****      ゲームモード列挙体      *****/
 //typedef enum BLOCK_NUMBER {
-	
+
 
 /*****      画像構造体      *****/
 typedef struct PICTURE {
@@ -66,6 +66,7 @@ typedef struct PICTURE {
 	int StageBlock[ 10 ];
 	int TitleImage[ 1 ];
 	int StrImage[ 60 ];
+	int TimeImage[ 10 ];
 	int Enemy[20];
 };
 PICTURE Pic;	//画像構造体宣言
@@ -121,20 +122,20 @@ ENEMY Enemy = { ( Player.PlayerX + (15 * _MASS_X ) + _MASS_HALF ), ( 12 * _MASS_
 
 
 int Map[ _MAP_Y ][ _MAP_X ] = 
-	{	{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
-		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
-		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
-		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
-		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
-		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
-		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
-		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
-		{  0,  0,  0,  0,  6,  2,  6,  2,  6,  0,  0,  0,  0,  0,  0,  0 },
-		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
-		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
-		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
-		{  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0 },
-		{  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0 }		};
+{	{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
+{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
+{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
+{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
+{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
+{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
+{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
+{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
+{  0,  0,  0,  0,  6,  2,  6,  2,  6,  0,  0,  0,  0,  0,  0,  0 },
+{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
+{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
+{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0 },
+{  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0 },
+{  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0 }		};
 
 /****************************************************/
 /*****											*****/
@@ -155,6 +156,7 @@ void DrawEnd();
 void DrawStage();	//ステージ描画
 void DrawPlayer();	//プレイヤー描画
 void DrawEnemy();	//エネミー描画
+void DrawUI();		//UI描画
 
 int LoadImages();
 
@@ -176,36 +178,36 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	if ( LoadImages() == -1 )	return -1;
 
 	while ( ProcessMessage() == 0 && ClearDrawScreen() == 0 && GAMESTATE != 99 && !(opt.Kflg & PAD_INPUT_START)) {
-	
+
 		opt.OldK = opt.NowK;
 		opt.NowK = GetJoypadInputState( DX_INPUT_KEY_PAD1 );
 		opt.Kflg = opt.NowK & ~opt.OldK;
 
 		switch( GAMESTATE ) {
 
-			case GAME_TITLE:
-				DrawTitle();
-				break;
-			case GAME_INIT:
-				GameInit();
-				break;
-			case GAME_MAIN:
-				GameMain();
-				break;
-			case GAME_END:
-				DrawEnd();
-				break;
+		case GAME_TITLE:
+			DrawTitle();
+			break;
+		case GAME_INIT:
+			GameInit();
+			break;
+		case GAME_MAIN:
+			GameMain();
+			break;
+		case GAME_END:
+			DrawEnd();
+			break;
 		}
-	
+
 		FR_Update();
-		#ifdef _DEBUGMODE
-			FR_Draw();
-		#endif
+#ifdef _DEBUGMODE
+		FR_Draw();
+#endif
 		ScreenFlip();
 		FR_Wait();
 
 	}
-	
+
 	DxLib_End();
 	return 0;
 
@@ -229,7 +231,7 @@ static bool FR_Update( ) {
 
 /******　　　　　　　フレームレート描画         ******/
 static void FR_Draw( ) {
-	
+
 	SetFontSize( _FONTSIZE_S );
 	DrawFormatString( 0, 0, 0xff0000, "%d", FR_Control.FrameCount );
 	DrawFormatString( 0, 20, 0xff0000, "%d", RefreshRate );
@@ -290,11 +292,16 @@ void DrawTitle() {
 	DrawRotaGraph( 28*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 22 ] , TRUE);
 	DrawRotaGraph( 29*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 14 ] , TRUE);
 
+	//タイム数字
+	DrawRotaGraph( 27*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 4 ] , TRUE);
+	DrawRotaGraph( 28*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 0 ] , TRUE);
+	DrawRotaGraph( 29*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 0 ] , TRUE);
+
 	//タイトル画面
 	DrawRotaGraph( 256, 134, 2.1f, 0, Pic.TitleImage[ 0 ] , TRUE );
-	
+
 	//タイトル判定
-	
+
 	if ( opt.Kflg & PAD_INPUT_10 ) {
 		GAMESTATE = GAME_INIT;
 	} else if ( opt.Kflg & PAD_INPUT_START ) {
@@ -322,6 +329,7 @@ void GameMain() {
 	DrawStage();		//ステージ描画
 	DrawPlayer();		//プレイヤー描画
 	DrawEnemy();		//エネミー描画
+	DrawUI();			//UI描画
 
 	if ( opt.Kflg & PAD_INPUT_10 ) {
 		GAMESTATE = GAME_TITLE;
@@ -333,7 +341,7 @@ void DrawStage() {
 
 	//背景描画
 	DrawBox( 0, 0, 512, 448, 0x5080f8, TRUE );
-	
+
 	//ライン描画
 	for ( int StageX = 0; StageX < _MAP_X; StageX++ ) {
 		DrawLine( StageX * _MASS_X, 0, StageX * _MASS_X, 480, 0xffffff );
@@ -419,6 +427,65 @@ void DrawEnemy(){
 	}
 }
 
+//UI描画処理
+void DrawUI(){
+
+	//wは退避領域
+	static int Flame = 0 , Time = 400 , w;
+	Flame ++;
+
+	//マリオ
+	DrawRotaGraph( 3*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 22 ] , TRUE); 
+	DrawRotaGraph( 4*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 10 ] , TRUE);  
+	DrawRotaGraph( 5*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 27 ] , TRUE); 
+	DrawRotaGraph( 6*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 18 ] , TRUE); 
+	DrawRotaGraph( 7*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 24 ] , TRUE);
+
+	//得点
+	DrawRotaGraph( 3*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 0 ] , TRUE);
+	DrawRotaGraph( 4*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 0 ] , TRUE);
+	DrawRotaGraph( 5*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 0 ] , TRUE);
+	DrawRotaGraph( 6*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 0 ] , TRUE);
+	DrawRotaGraph( 7*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 0 ] , TRUE);
+	DrawRotaGraph( 8*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 0 ] , TRUE);
+
+	//コインの枚数
+	DrawRotaGraph( 11*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 50 ] , TRUE);
+	DrawRotaGraph( 12*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 37 ] , TRUE);
+	DrawRotaGraph( 13*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 0 ] , TRUE);
+	DrawRotaGraph( 14*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 0 ] , TRUE);
+
+	//ワールド
+	DrawRotaGraph( 18*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 32 ] , TRUE);
+	DrawRotaGraph( 19*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 24 ] , TRUE);
+	DrawRotaGraph( 20*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 27 ] , TRUE);
+	DrawRotaGraph( 21*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 21 ] , TRUE);
+	DrawRotaGraph( 22*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 13 ] , TRUE);
+
+	//ステージ
+	DrawRotaGraph( 19*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 1 ] , TRUE);
+	DrawRotaGraph( 20*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 36 ] , TRUE);
+	DrawRotaGraph( 21*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 1 ] , TRUE);
+
+	//タイム
+	DrawRotaGraph( 26*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 29 ] , TRUE);
+	DrawRotaGraph( 27*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 18 ] , TRUE);
+	DrawRotaGraph( 28*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 22 ] , TRUE);
+	DrawRotaGraph( 29*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 14 ] , TRUE);
+	
+	//タイム数字
+	DrawRotaGraph( 27*_SIZE_STR , 32 , 1.0f , 0 , Pic.TimeImage[ Time / 100 ] , TRUE);
+	DrawRotaGraph( 28*_SIZE_STR , 32 , 1.0f , 0 , Pic.TimeImage[ w / 10 ] , TRUE);
+	DrawRotaGraph( 29*_SIZE_STR , 32 , 1.0f , 0 , Pic.TimeImage[ Time % 10 ] , TRUE);
+	
+	w = Time % 100;
+
+	if( Flame == 30){
+		Flame = 0;
+		Time --;
+	}
+}
+
 
 int LoadImages() {
 
@@ -426,6 +493,8 @@ int LoadImages() {
 	if ( ( Pic.TitleImage[0] = LoadGraph( "images/TitleImage01.png" ) ) == -1 ) return -1;
 	//タイトル文字読込
 	if ( LoadDivGraph( "images/font.png", 60, 10, 6, 16, 16, Pic.StrImage ) == -1 )	return -1;
+	//タイム文字読み込み
+	if ( LoadDivGraph( "images/font.png", 10, 10, 1, 16, 16, Pic.TimeImage ) == -1 )	return -1;
 	//ブロック読込
 	if ( LoadDivGraph( "images/Block.png", 9, 9, 1, 32, 32, Pic.StageBlock + 1 ) == -1 )	return -1;
 	//キャラクター読込
