@@ -107,6 +107,7 @@ typedef struct PLAYER {
 	int PlayerY;	//プレイヤー座標Y
 	float PSpeed;	//プレイヤースピード
 	int JumpFrame;	//ジャンプフレーム
+	int JumpTime;	//スペースキーの押された時間
 	int P_i_f;		//歩行フレーム
 	int P_lr_f;		//歩行方向変数
 	int JF_f;
@@ -176,17 +177,11 @@ int LoadImages();	//画像読込
 
 int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow ) {
 
-//デバッグモード時のウィンドウサイズ設定
-#ifdef _DEBUGMODE
-	const int _WINDOWSIZE_X = 900;
-	const int _WINDOWSIZE_Y = 648;
-#endif
 
-//デバッグモードなしの時のウィンドウサイズ設定
-#ifndef _DEBUGMODE
-	const int _WINDOWSIZE_X = 712;
-	const int _WINDOWSIZE_Y = 648;
-#endif
+
+	const int _WINDOWSIZE_X = 768;
+	const int _WINDOWSIZE_Y = 672;
+
 
 	GAMESTATE = GAME_TITLE;
 	SetMainWindowText( "Super Mairo Bros" );					//ウィンドウテキスト変更
@@ -194,10 +189,11 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 	ChangeWindowMode( _WINDOWMODE );							//ウィンドウモード変更
 	if ( DxLib_Init() == -1 )	return -1;		//Dxライブラリ初期化
+
 	int offscreen_handle = MakeScreen( 512, 448, FALSE );
-	
+
+
 	SetDrawScreen( offscreen_handle );							//描画スクリーン変更
-	
 	/********************     リフレッシュレート確認     *************************/
 	hdc = GetDC( GetMainWindowHandle() ) ;			// デバイスコンテキストの取得
 	RefreshRate = GetDeviceCaps( hdc, VREFRESH ) ;	// リフレッシュレートの取得
@@ -235,11 +231,13 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 		}
 	
 		FR_Update();
+		SetDrawScreen( DX_SCREEN_BACK );
+		DrawExtendGraph( 0, 0, _WINDOWSIZE_X, _WINDOWSIZE_Y, offscreen_handle, FALSE );
 #ifdef _DEBUGMODE
 			FR_Draw();
 #endif
-		SetDrawScreen( DX_SCREEN_BACK );
-		DrawExtendGraph( 0, 0, _WINDOWSIZE_X - 188, _WINDOWSIZE_Y, offscreen_handle, FALSE );
+		
+		
 		ScreenFlip();
 		FR_Wait();
 
@@ -288,13 +286,16 @@ static void FR_Wait( ) {
 
 //タイトル描画
 void DrawTitle() {
+//	DrawGraph(100,100,Pic.Player[1],TRUE);
 	int x;
 
-	x = 320 - GetDrawStringWidth( "MARIO", 5 );
-	DrawFormatString( x, 240, 0xff0000, "MARIO" );
+	x = 256 - (GetDrawStringWidth( "MARIO", 5 )/2);
+	DrawString( x, 240, "MARIO", 0xff0000 );
 
-	x = 320 - GetDrawStringWidth( "Push Space", 10 );
-	DrawFormatString( x, 400, 0xffffff, "Push Space" );
+	x = 256 - (GetDrawStringWidth( "Push Space", 10 )/2);
+	DrawString( x, 400, "Push Space", 0xffffff );
+	
+	
 
 	if ( opt.Kflg & PAD_INPUT_M ) {
 		GAMESTATE = GAME_INIT;
@@ -331,6 +332,7 @@ void GameMain() {
 //ステージ描画
 void DrawStage() {
 
+
 	//背景描画
 	DrawBox( 0, 0, 512, 448, 0x5080f8, TRUE );
 	
@@ -365,6 +367,7 @@ void DrawStage() {
 			map[ StageY ][ StageX ].CoX -= Player.MapScrollX;
 		}
 	}
+	
 
 }
 
@@ -392,10 +395,12 @@ void DrawPlayer() {
 		if ( Player.PSpeed < 4.0f ) {
 			Player.PSpeed += 0.2f;
 		}
-		Player.PlayerX += Player.PSpeed;	//プレイヤー移動
+		Player.PlayerX += Player.PSpeed;//プレイヤー移動
+		Player.Scroll+=Player.PSpeed;
 		Player.P_lr_f=0;					//左右反転フラグ
 		if ( Player.PlayerX >= 6  * _MASS_X + _MASS_HALF ) {
 			Player.PlayerX -= Player.PSpeed;
+			//Player.Scroll -= Player.PSpeed;
 			Player.MapScrollX = Player.PSpeed;
 		}
 
@@ -403,11 +408,13 @@ void DrawPlayer() {
 	}
 	/*****     左移動処理     *****/
 	else if ( Player.PlayerX >= ( 0 * _MASS_X + _MASS_HALF ) && ( opt.NowK & PAD_INPUT_LEFT || opt.NowK & PAD_INPUT_X ) ) {
+		Player.MapScrollX = 0;
 		PDrawMode = 1;						//動いてるかいないかの処理
 		if ( Player.PSpeed < 4.0f ) {
 			Player.PSpeed += 0.2f;			//加速度設定
 		}
 		Player.PlayerX -= Player.PSpeed;	//プレイヤー移動
+		Player.Scroll -= Player.PSpeed;
 		Player.P_lr_f=1;					//左右反転フラグ
 		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, TRUE );			//歩行時のプレイヤー描画
 	}
@@ -416,17 +423,24 @@ void DrawPlayer() {
 			Player.PSpeed -= 0.4f;
 			if ( Player.P_lr_f == 0 && ( Player.PlayerX < 5 * _MASS_X + _MASS_HALF ) ) { 
 				Player.PlayerX += Player.PSpeed;
+				Player.Scroll += Player.PSpeed;
 			} 
 			else if ( Player.P_lr_f == 1 && ( Player.PlayerX > 0 * _MASS_X + _MASS_HALF ) ) {
 				Player.PlayerX -= Player.PSpeed;
+				Player.Scroll -= Player.PSpeed;
 			}
 		}
 		Player.MapScrollX = 0;
 	}
-
+	for(int test=1;test<32;test++)
+	DrawPixel(1,test,0x000000);
+	
 	//ジャンプ処理
 	if( Player.JumpFrame == 0 && opt.Kflg & PAD_INPUT_M ) {
 		Player.JumpFrame++;
+	}
+	if(opt.NowK==PAD_INPUT_M){
+		Player.JumpTime++;
 	}
 	if ( Player.JumpFrame > 0 ) {
 		if ( Player.JumpFrame < 12 )	Player.JF_f = 1;
@@ -480,12 +494,13 @@ void DrawPlayer() {
 	if ( map[ ( ( Player.PlayerY - 16 ) / 32 ) + 1 ][ ( Player.PlayerX / 32 ) ].MapNum == 0 && Player.JumpFrame == 0 )	Player.JumpFrame = 24;
 
 #ifdef _DEBUGMODE
-	DrawFormatString( 516,  50, 0xff0000, "OldK = %d", opt.OldK );		//OldK描画
-	DrawFormatString( 516,  80, 0xff0000, "NowK = %d", opt.NowK );		//NowK描画
-	DrawFormatString( 516, 110, 0xff0000, "PdrM = %d", PDrawMode );		//PDrawMode描画
-	DrawFormatString( 516, 140, 0xff0000, "LR_F = %d", Player.P_lr_f );	//P_lr_f描画
-	DrawFormatString( 516, 170, 0xff0000, "PlrX = %d", Player.PlayerX );//PlayerX描画
-	DrawFormatString( 516, 200, 0xff0000, "PlrY = %d", Player.PlayerY );	//PlayerY描画
+	DrawFormatString( 390,  50, 0xff0000, "OldK = %d", opt.OldK );		//OldK描画
+	DrawFormatString( 390,  80, 0xff0000, "NowK = %d", opt.NowK );		//NowK描画
+	DrawFormatString( 390, 110, 0xff0000, "PdrM = %d", PDrawMode );		//PDrawMode描画
+	DrawFormatString( 390, 140, 0xff0000, "LR_F = %d", Player.P_lr_f );	//P_lr_f描画
+	DrawFormatString( 390, 170, 0xff0000, "PlrX = %d", Player.PlayerX );//PlayerX描画
+	DrawFormatString( 390, 200, 0xff0000, "PlrY = %d", Player.PlayerY );	//PlayerY描画
+	DrawFormatString( 350, 230, 0xff0000, "Scroll = %d", Player.Scroll );	
 #endif
 
 	//無動作時のプレイヤー描画
