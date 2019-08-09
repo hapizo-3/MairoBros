@@ -367,7 +367,7 @@ void DrawStage() {
 			map[ StageY ][ StageX ].CoX -= Player.MapScrollX;
 		}
 	}
-	
+	Player.Scroll=-map[0][0].CoX;
 
 }
 
@@ -396,11 +396,9 @@ void DrawPlayer() {
 			Player.PSpeed += 0.2f;
 		}
 		Player.PlayerX += Player.PSpeed;//プレイヤー移動
-		Player.Scroll+=Player.PSpeed;
 		Player.P_lr_f=0;					//左右反転フラグ
 		if ( Player.PlayerX >= 6  * _MASS_X + _MASS_HALF ) {
 			Player.PlayerX -= Player.PSpeed;
-			//Player.Scroll -= Player.PSpeed;
 			Player.MapScrollX = Player.PSpeed;
 		}
 
@@ -414,7 +412,6 @@ void DrawPlayer() {
 			Player.PSpeed += 0.2f;			//加速度設定
 		}
 		Player.PlayerX -= Player.PSpeed;	//プレイヤー移動
-		Player.Scroll -= Player.PSpeed;
 		Player.P_lr_f=1;					//左右反転フラグ
 		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, TRUE );			//歩行時のプレイヤー描画
 	}
@@ -423,17 +420,16 @@ void DrawPlayer() {
 			Player.PSpeed -= 0.4f;
 			if ( Player.P_lr_f == 0 && ( Player.PlayerX < 5 * _MASS_X + _MASS_HALF ) ) { 
 				Player.PlayerX += Player.PSpeed;
-				Player.Scroll += Player.PSpeed;
+				
 			} 
 			else if ( Player.P_lr_f == 1 && ( Player.PlayerX > 0 * _MASS_X + _MASS_HALF ) ) {
 				Player.PlayerX -= Player.PSpeed;
-				Player.Scroll -= Player.PSpeed;
+				
 			}
 		}
 		Player.MapScrollX = 0;
 	}
-	for(int test=1;test<32;test++)
-	DrawPixel(1,test,0x000000);
+	
 	
 	//ジャンプ処理
 	if( Player.JumpFrame == 0 && opt.Kflg & PAD_INPUT_M ) {
@@ -500,7 +496,7 @@ void DrawPlayer() {
 	DrawFormatString( 390, 140, 0xff0000, "LR_F = %d", Player.P_lr_f );	//P_lr_f描画
 	DrawFormatString( 390, 170, 0xff0000, "PlrX = %d", Player.PlayerX );//PlayerX描画
 	DrawFormatString( 390, 200, 0xff0000, "PlrY = %d", Player.PlayerY );	//PlayerY描画
-	DrawFormatString( 350, 230, 0xff0000, "Scroll = %d", Player.Scroll );	
+	DrawFormatString( 360, 230, 0xff0000, "Scroll = %d", Player.Scroll );	
 #endif
 
 	//無動作時のプレイヤー描画
