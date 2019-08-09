@@ -8,6 +8,9 @@
 //0が全画面モード、1がウィンドウモード
 #define _WINDOWMODE	1
 
+const int _WINDOWDSIZE_X = 1000;
+const int _WINDOWDSIZE_Y = 672;
+
 //フレームレート定数( 60 )
 #define	_FRAMERATE_60	60
 
@@ -115,6 +118,7 @@ typedef struct MAP {
 	int BreakFlg;	//壊れた判定するやつ
 	int CoX;		//ブロックのX座標
 	int CoY;		//ブロックのY座標
+	int MapScroll;	//マップスクロールするときの変数
 };
 MAP map[ _MAP_ALLSIZE_Y ][ _MAP_ALLSIZE_X ];
 
@@ -205,24 +209,32 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 //デバッグモード時のウィンドウサイズ設定
 #ifdef _DEBUGMODE
-	const int _WINDOWSIZE_X = 900;
-	const int _WINDOWSIZE_Y = 648;
+	const int _WINDOWSIZE_X = 1000;
+	const int _WINDOWSIZE_Y = 672;
 #endif
 
 //デバッグモードなしの時のウィンドウサイズ設定
 #ifndef _DEBUGMODE
-	const int _WINDOWSIZE_X = 712;
-	const int _WINDOWSIZE_Y = 648;
+	const int _WINDOWSIZE_X = 768;
+	const int _WINDOWSIZE_Y = 672;
 #endif
 
 	GAMESTATE = GAME_TITLE;
+
 	SetMainWindowText( "Super Mairo Bros" );					//ウィンドウテキスト変更
 	SetGraphMode( _WINDOWSIZE_X, _WINDOWSIZE_Y, 32 );			//ウィンドウサイズ変更
+	ChangeWindowMode( _WINDOWMODE );	//ウィンドウモード変更
 
-	ChangeWindowMode( _WINDOWMODE );							//ウィンドウモード変更
 	if ( DxLib_Init() == -1 )	return -1;		//Dxライブラリ初期化
+
+#ifdef _DEBUGMODE
+	int offscreen_handle = MakeScreen( 666, 448, FALSE );
+#endif
+
+#ifndef _DEBUGMODE
 	int offscreen_handle = MakeScreen( 512, 448, FALSE );
-	
+#endif
+
 	SetDrawScreen( offscreen_handle );							//描画スクリーン変更
 	
 	/********************     リフレッシュレート確認     *************************/
@@ -234,16 +246,14 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	if ( LoadImages() == -1 )	return -1;		//画像読込処理
 
 	/*************************     メインループ処理     **************************/
-	while ( ProcessMessage() == 0 && ClearDrawScreen() == 0 && GAMESTATE != 99 ) {
+	while ( ProcessMessage() == 0  && GAMESTATE != 99 ) {
 	
-
 		SetDrawScreen( offscreen_handle );
+		ClearDrawScreen();
 
 		opt.OldK = opt.NowK;
 		opt.NowK = GetJoypadInputState( DX_INPUT_KEY_PAD1 );
 		opt.Kflg = opt.NowK & ~opt.OldK;
-
-		
 
 		switch( GAMESTATE ) {
 
@@ -262,14 +272,21 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 		}
 	
 		FR_Update();
-#ifdef _DEBUGMODE
-			FR_Draw();
-#endif
-		SetDrawScreen( DX_SCREEN_BACK );
-		DrawExtendGraph( 0, 0, _WINDOWSIZE_X - 188, _WINDOWSIZE_Y, offscreen_handle, FALSE );
-		ScreenFlip();
+	#ifdef _DEBUGMODE
+		FR_Draw();
+	#endif
 		FR_Wait();
+		SetDrawScreen( DX_SCREEN_BACK );
 
+	#ifdef _DEBUGMODE
+		DrawExtendGraph( 0, 0, _WINDOWSIZE_X/* - 232*/, _WINDOWSIZE_Y, offscreen_handle, FALSE );
+	#endif
+
+	#ifndef _DEBUGMODE
+		DrawExtendGraph( 0, 0, _WINDOWSIZE_X, _WINDOWSIZE_Y, offscreen_handle, FALSE );
+	#endif
+
+		ScreenFlip();
 	}
 	
 	DxLib_End();
@@ -463,27 +480,29 @@ void DrawPlayer() {
 		Player.P_i_f = 0;	//キー操作をやめた時
 	}
 
-	//歩行処理
-	/*****     右移動処理     *****/
-	if ( Player.PlayerX <= ( 6 * _MASS_X + _MASS_HALF ) && ( opt.NowK & PAD_INPUT_RIGHT || opt.NowK & PAD_INPUT_Z ) ) {
-		PDrawMode = 1;						//動いてるかいないかの処理
-		//加速度設定
-		if ( Player.PSpeed < 4.0f ) {
-			Player.PSpeed += 0.2f;
-		}
-		Player.PlayerX += Player.PSpeed;	//プレイヤー移動
-		Player.P_lr_f=0;					//左右反転フラグ
-		if ( Player.PlayerX >= 6  * _MASS_X + _MASS_HALF ) {
-			Player.PlayerX -= Player.PSpeed;
-			Player.MapScrollX = Player.PSpeed;
-		}
+	//右歩行処理
+	//if ( Player.PlayerX <= ( 6 * _MASS_X + _MASS_HALF ) && ( opt.NowK & PAD_INPUT_RIGHT || opt.NowK & PAD_INPUT_Z ) ) {
+	//	PDrawMode = 1;						//動いてるかいないかの処理
+	//	if ( Player.PSpeed < 6.0f ) {
+	//		Player.PSpeed += 0.2f;			//加速度設定
+	//	}
+	//	Player.PlayerX += Player.PSpeed;	//プレイヤー移動
+	//	Player.P_lr_f=0;					//左右反転フラグ
+	//	if ( Player.PlayerX >= 6 * _MASS_X + _MASS_HALF ) {
+	//		Player.PlayerX -= Player.PSpeed;
+	//		Player.MapScrollX = Player.PSpeed;
+	//	}
 
+	//	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, FALSE );		//歩行時のプレイヤー描画
+	//}
+	if ( Player.PlayerX <= ( 15 * _MASS_X + _MASS_HALF ) && ( opt.NowK & PAD_INPUT_RIGHT || opt.NowK & PAD_INPUT_Z ) ) {
+		PDrawMode = 1;
 		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, FALSE );		//歩行時のプレイヤー描画
 	}
 	/*****     左移動処理     *****/
 	else if ( Player.PlayerX >= ( 0 * _MASS_X + _MASS_HALF ) && ( opt.NowK & PAD_INPUT_LEFT || opt.NowK & PAD_INPUT_X ) ) {
 		PDrawMode = 1;						//動いてるかいないかの処理
-		if ( Player.PSpeed < 4.0f ) {
+		if ( Player.PSpeed < 6.0f ) {
 			Player.PSpeed += 0.2f;			//加速度設定
 		}
 		Player.MapScrollX = 0;
@@ -493,7 +512,7 @@ void DrawPlayer() {
 	}
 	else {
 		if ( Player.PSpeed >= 0.0f ) {
-			Player.PSpeed -= 0.4f;
+			Player.PSpeed -= 0.6f;
 			if ( Player.P_lr_f == 0 && ( Player.PlayerX < 5 * _MASS_X + _MASS_HALF ) ) { 
 				Player.PlayerX += Player.PSpeed;
 			} 
