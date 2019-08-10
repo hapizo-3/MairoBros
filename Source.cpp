@@ -27,15 +27,20 @@
 #define _MAP_X		16
 #define _MAP_Y		14
 
-/*****		プレイヤー系定数		*****/
-#define _PLAYER_MAXSPEED	3
-
-//当たり判定のあるブロックの総数
-#define _HITCHIP_ALL	21
-
 //マップ全サイズ
 #define _MAP_ALLSIZE_X 220
 #define _MAP_ALLSIZE_Y 14
+
+//当たり判定のあるブロックの数
+#define _HITBLOCK	21
+
+//当たり判定制御定数
+#define _HIT_FALSE	0
+#define _HIT_TRUE	1
+
+//方向の定数
+#define _DIRECT_RIGHT	0
+#define _DIRECT_LEFT	1
 
 //ゲーム状態変数
 static int GAMESTATE;
@@ -109,39 +114,42 @@ MAP map[ _MAP_ALLSIZE_Y ][ _MAP_ALLSIZE_X ];
 
 /*****		プレイヤー構造体		*****/
 typedef struct PLAYER {
-	int PlayerX;	//プレイヤー座標X
-	int PlayerY;	//プレイヤー座標Y
-	float PSpeed;	//プレイヤースピード
-	float P_FallSpeed;	//プレイヤー落下スピード
-	int JumpFrame;	//ジャンプフレーム
-	int P_i_f;		//歩行フレーム
-	int P_lr_f;		//歩行方向変数
-	int JF_f;		//ジャンプフレームのやつ
-	int MapScrollX;	//マップスクロールするのに必要なやつ
-	int Scroll;		//マップスクロールの現在量
+	int PlayerX;		//プレイヤー座標X
+	int PlayerY;		//プレイヤー座標Y
+	float PSpeed;		//プレイヤースピード
+	int JumpFrame;		//ジャンプフレーム
+	int JumpTime;		//スペースキーの押された時間
+	int P_i_f;			//歩行フレーム
+	int P_lr_f;			//歩行方向変数
+	int JF_f;
+	int MapScrollX;		//マップスクロールするのに必要なやつ
+	int Scroll;			//マップスクロールの現在量
+	float PfallSpeed;	//落下スピード
+	int PDirectMode;	//方向で処理帰るときの変数
 };
-PLAYER Player = { ( ( 2 * _MASS_X ) + _MASS_HALF ), ( 11 * _MASS_Y + _MASS_HALF ), 0, 0, 0, 0, 0, 0 };
+//first 3,11
+PLAYER Player = { ( ( 2 * _MASS_X ) + _MASS_HALF ), ( 6 * _MASS_Y + _MASS_HALF ), 0, 0 };
 
 int Map[ _MAP_ALLSIZE_Y ][ _MAP_ALLSIZE_X ] = 
 	{	
 		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0},
 		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 19, 20, 21,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 19, 20, 20, 21,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 19, 20, 21,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 19, 20, 20, 21,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 19, 20, 21,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 19, 20, 20, 21,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 19, 20, 21,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 19, 20, 20, 21,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 34,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0},
 		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 33,  0,  0,  0,  0,  0, 19, 20, 20, 20, 21,  0,  0,  0,  0, 31, 32, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 19, 20, 21,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 33,  0,  0,  0,  0,  0, 19, 20, 20, 20, 21,  0,  0,  0,  0,  0, 31, 32, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 19, 20, 21,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 33,  0,  0,  0,  0,  0, 19, 20, 20, 20, 21,  0,  0,  0,  0,  0, 31, 32, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 19, 20, 21,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 33,  0,  0,  0,  0,  0, 19, 20, 20, 20, 21,  0,  0,  0,  0, 31, 32, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 35,  0,  0, 19, 20, 21,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0},
-		{  0,  0,  0,  0,  0,  0,  0,  0, 19, 20, 21,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 32, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 32, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 32, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 32, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 35,  0,  0, 31, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0},
-		{  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  6,  6,  6,  6,  6,  6,  6,  0,  0,  0,  6,  6,  6,  3,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  3,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  7,  7,  7,  0,  0,  0,  0,  0,  7,  2,  2,  7,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  0,  0,  0,  0,  0,  0,  0,  0, 35,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0},
+		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 32, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 32, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 32, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 32, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 35,  0,  0, 31, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0},
+		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  6,  6,  6,  0,  0,  0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  6,  6,  6,  6,  6,  6,  6,  0,  0,  0,  6,  6,  6,  3,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  3,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  7,  7,  7,  0,  0,  0,  0,  0,  7,  2,  2,  7,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  0,  0,  0,  0,  0,  0,  0,  0, 35,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0},
 		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  9,  0,  0,  0,  0,  0,  0,  0,  0, 35,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0},
 		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  9,  9,  0,  0,  0,  0,  0,  0,  0,  0, 35,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0},
 		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  9,  9,  9,  0,  0,  0,  0,  0,  0,  0,  0, 35,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0},
-		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  6,  2,  6,  2,  6,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 65, 66,  0,  0,  0,  0,  0,  0,  0,  0,  0, 65, 66,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  4,  6,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  0,  0,  0,  0,  0,  6,  7,  0,  0,  0,  0,  3,  0,  0,  3,  0,  0,  3,  0,  0,  0,  0,  0,  6,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  6,  0,  0,  0,  0,  0,  0,  9,  0,  0,  9,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  0,  0,  9,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  7,  7,  4,  7,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  9,  9,  9,  9,  0,  0,  0,  0,  0,  0,  0,  0, 35,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0},
+		{  0,  0,  6,  0,  6,  0,  6,  0,  6,  0,  6,  0,  6,  0,  0,  0,  2,  0,  0,  0,  6,  2,  6,  2,  6,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 65, 66,  0,  0,  0,  0,  0,  0,  0,  0,  0, 65, 66,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  4,  6,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  0,  0,  0,  0,  0,  6,  7,  0,  0,  0,  0,  3,  0,  0,  3,  0,  0,  3,  0,  0,  0,  0,  0,  6,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  6,  0,  0,  0,  0,  0,  0,  9,  0,  0,  9,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  0,  0,  9,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  7,  7,  4,  7,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  9,  9,  9,  9,  0,  0,  0,  0,  0,  0,  0,  0, 35,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0},
 		{  0,  0, 18,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 65, 66,  0,  0,  0,  0,  0,  0, 77, 78,  0,  0, 18,  0,  0,  0,  0,  0,  0, 77, 78,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 18,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  0,  0,  9,  9,  0,  0,  0,  0, 18,  0,  0,  0,  9,  9,  9,  0,  0,  9,  9,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  9,  9,  9,  9,  9,  0,  0,  0,  0, 18,  0,  0,  0, 35,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0},
 		{  0, 15, 16, 17,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 18,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 65, 66,  0,  0,  0,  0,  0,  0,  0,  0, 77, 78,  0,  0,  0,  0,  0,  0, 77, 78,  0, 15, 16, 17,  0,  0,  0,  0,  0, 77, 78,  0,  0,  0,  0,  0,  0, 18,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 15, 16, 17,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 18,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  9,  0,  0,  9,  9,  9,  0,  0, 15, 16, 17,  0,  9,  9,  9,  9,  0,  0,  9,  9,  9,  0,  0,  0, 18,  0, 65, 66,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 65, 66,  0,  9,  9,  9,  9,  9,  9,  9,  9,  0,  0,  0, 15, 16, 17,  0,  0, 35,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0},
-		{ 15, 16, 69, 16, 17,  0,  0,  0,  0,  0,  0, 22, 23, 23, 23, 24, 15, 16, 17,  0,  0,  0,  0, 22, 23, 24,  0,  0, 77, 78,  0,  0,  0,  0,  0,  0,  0,  0, 77, 78,  0, 22, 23, 23, 24,  0, 77, 78, 15, 16, 69, 16, 17,  0,  0,  0,  0, 77, 78, 22, 23, 23, 23, 24, 15, 16, 17,  0,  0,  0,  0,  0, 22, 23, 24,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 22, 23, 23, 24,  0,  0,  0, 15, 16, 69, 16, 17,  0,  0,  0,  0,  0,  0, 22, 23, 23, 23, 24, 15, 16, 17,  0,  0,  0,  0, 22, 23, 24,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  9,  9, 23, 23,  9,  9,  9,  9, 15, 16, 69, 16,  9,  9,  9,  9,  9,  0,  0,  9,  9,  9,  9, 24, 15, 16, 17, 77, 78,  0,  0, 22, 23, 24,  0,  0,  0,  0,  0,  0,  0,  0,  0, 77, 78,  9,  9,  9,  9,  9,  9,  9,  9,  9,  0,  0, 15, 16, 69, 16, 17,  0,  9,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0},
-		{  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0,  0,  0,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0,  0,  0,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0,  0,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8, 8},
-		{  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0,  0,  0,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0,  0,  0,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0,  0,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8, 8}
-	};																																																																																																																																						  
+		{ 15, 16, 69, 16, 17,  0,  0,  0,  0,  0,  2, 22, 23, 23, 23, 24, 15, 16, 17,  0,  0,  0,  0, 22, 23, 24,  0,  0, 77, 78,  0,  0,  0,  0,  0,  0,  0,  0, 77, 78,  0, 22, 23, 23, 24,  0, 77, 78, 15, 16, 69, 16, 17,  0,  0,  0,  0, 77, 78, 22, 23, 23, 23, 24, 15, 16, 17,  0,  0,  0,  0,  0, 22, 23, 24,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 22, 23, 23, 24,  0,  0,  0, 15, 16, 69, 16, 17,  0,  0,  0,  0,  0,  0, 22, 23, 23, 23, 24, 15, 16, 17,  0,  0,  0,  0, 22, 23, 24,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  9,  9, 23, 23,  9,  9,  9,  9, 15, 16, 69, 16,  9,  9,  9,  9,  9,  0,  0,  9,  9,  9,  9, 24, 15, 16, 17, 77, 78,  0,  0, 22, 23, 24,  0,  0,  0,  0,  0,  0,  0,  0,  0, 77, 78,  9,  9,  9,  9,  9,  9,  9,  9,  9,  0,  0, 15, 16, 69, 16, 17,  0,  9,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0},
+		{  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0,  0,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0,  0,  0,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0,  0,  0,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0,  0,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8, 8},
+		{  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0,  0,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0,  0,  0,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0,  0,  0,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0,  0,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8, 8}
+	};
 
 //当たり判定のあるマップナンバー
-int HitBlockNum[ _HITCHIP_ALL ] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 37, 38, 39, 40, 41, 42, 49, 50, 51, 52, 53, 54 };
+int HitBlockNum[ _HITBLOCK ] = { 1, 2, 3, 4, 5, 6, 7 , 8, 9, 37, 38, 39, 40, 41, 42, 49, 50, 51, 52, 53, 54 };
 
 /****************************************************/
 /*****											*****/
@@ -169,12 +177,12 @@ void DrawPlayer();	//プレイヤー描画
 void DrawBlock();	//ブロック描画
 void DrawItem();	//アイテム描画
 
-//プレイヤー処理系関数
-//当たり判定関数( TRUEならヒットあり、FALSEならヒットなし )
-int HitBlockUp( int MapX, int MapY );		//ブロック上当たり判定
-int HitBlockDown( int MapX, int MapY );		//ブロック下当たり判定
-int HitBlockRight( int MapX, int MapY );	//ブロック右当たり判定
-int HitBlockLeft( int MapX, int MapY );		//ブロック左当たり判定
+//マリオ処理系関数
+// int ComX, int ComY 
+int HitBlockUp();		//ブロック上当たり判定
+int HitBlockDown();		//ブロック下当たり判定
+int HitBlockRight();	//ブロック右当たり判定
+int HitBlockLeft();		//ブロック左当たり判定
 
 //読込処理関数
 int LoadImages();	//画像読込
@@ -187,40 +195,42 @@ int LoadImages();	//画像読込
 
 int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow ) {
 
-//デバッグモード時のウィンドウサイズ設定
-#ifdef _DEBUGMODE
-	const int _WINDOWSIZE_X = 700;
-	const int _WINDOWSIZE_Y = 448;
-#endif
 
-//デバッグモードなしの時のウィンドウサイズ設定
-#ifndef _DEBUGMODE
-	const int _WINDOWSIZE_X = 512;
-	const int _WINDOWSIZE_Y = 448;
-#endif
+
+	const int _WINDOWSIZE_X = 768;
+	const int _WINDOWSIZE_Y = 672;
+
 
 	GAMESTATE = GAME_TITLE;
 	SetMainWindowText( "Super Mairo Bros" );					//ウィンドウテキスト変更
+	SetGraphMode( _WINDOWSIZE_X, _WINDOWSIZE_Y, 32 );			//ウィンドウサイズ変更
 
 	ChangeWindowMode( _WINDOWMODE );							//ウィンドウモード変更
-	SetGraphMode( _WINDOWSIZE_X, _WINDOWSIZE_Y, 32 );			//ウィンドウサイズ変更
-	SetDrawScreen( DX_SCREEN_BACK );							//描画スクリーン変更
-	
+	if ( DxLib_Init() == -1 )	return -1;		//Dxライブラリ初期化
+
+	int offscreen_handle = MakeScreen( 512, 448, FALSE );
+
+
+	SetDrawScreen( offscreen_handle );							//描画スクリーン変更
 	/********************     リフレッシュレート確認     *************************/
 	hdc = GetDC( GetMainWindowHandle() ) ;			// デバイスコンテキストの取得
 	RefreshRate = GetDeviceCaps( hdc, VREFRESH ) ;	// リフレッシュレートの取得
 	ReleaseDC( GetMainWindowHandle(), hdc ) ;		// デバイスコンテキストの解放
 	/*****************************************************************************/
 
-	if ( DxLib_Init() == -1 )	return -1;		//Dxライブラリ初期化
 	if ( LoadImages() == -1 )	return -1;		//画像読込処理
 
 	/*************************     メインループ処理     **************************/
 	while ( ProcessMessage() == 0 && ClearDrawScreen() == 0 && GAMESTATE != 99 ) {
 	
+
+		SetDrawScreen( offscreen_handle );
+
 		opt.OldK = opt.NowK;
 		opt.NowK = GetJoypadInputState( DX_INPUT_KEY_PAD1 );
 		opt.Kflg = opt.NowK & ~opt.OldK;
+
+		
 
 		switch( GAMESTATE ) {
 
@@ -239,9 +249,11 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 		}
 	
 		FR_Update();
-		#ifdef _DEBUGMODE
+		SetDrawScreen( DX_SCREEN_BACK );
+		DrawExtendGraph( 0, 0, _WINDOWSIZE_X, _WINDOWSIZE_Y, offscreen_handle, FALSE );
+#ifdef _DEBUGMODE
 			FR_Draw();
-		#endif
+#endif
 		ScreenFlip();
 		FR_Wait();
 
@@ -290,13 +302,16 @@ static void FR_Wait( ) {
 
 //タイトル描画
 void DrawTitle() {
+//	DrawGraph(100,100,Pic.Player[1],TRUE);
 	int x;
 
-	x = 320 - GetDrawStringWidth( "MARIO", 5 );
-	DrawFormatString( x, 240, 0xff0000, "MARIO" );
+	x = 256 - (GetDrawStringWidth( "MARIO", 5 )/2);
+	DrawString( x, 240, "MARIO", 0xff0000 );
 
-	x = 320 - GetDrawStringWidth( "Push Space", 10 );
-	DrawFormatString( x, 400, 0xffffff, "Push Space" );
+	x = 256 - (GetDrawStringWidth( "Push Space", 10 )/2);
+	DrawString( x, 400, "Push Space", 0xffffff );
+	
+	
 
 	if ( opt.Kflg & PAD_INPUT_M ) {
 		GAMESTATE = GAME_INIT;
@@ -314,6 +329,8 @@ void DrawEnd() {
 void GameInit() {
 
 	MapInit();
+	Player.PfallSpeed = 0.0f;
+	Player.PSpeed = 0.0f;
 
 	GAMESTATE = GAME_MAIN;
 
@@ -333,18 +350,19 @@ void GameMain() {
 //ステージ描画
 void DrawStage() {
 
+
 	//背景描画
 	DrawBox( 0, 0, 512, 448, 0x5080f8, TRUE );
 	
 	//ライン描画
-#ifdef _DEBUGMODE
-	for ( int StageX = 0; StageX <= _MAP_X; StageX++ ) {
-		DrawLine( StageX * _MASS_X, 0, StageX * _MASS_X, 448, 0xffffff );
-	}
-	for ( int StageY = 0; StageY < _MAP_Y ; StageY++ ) {
-		DrawLine( 0, StageY * _MASS_Y, 512, StageY * _MASS_Y, 0xffffff );
-	}
-#endif
+//#ifdef _DEBUGMODE
+//	for ( int StageX = 0; StageX <= _MAP_X; StageX++ ) {
+//		DrawLine( StageX * _MASS_X, 0, StageX * _MASS_X, 448, 0xffffff );
+//	}
+//	for ( int StageY = 0; StageY < _MAP_Y ; StageY++ ) {
+//		DrawLine( 0, StageY * _MASS_Y, 512, StageY * _MASS_Y, 0xffffff );
+//	}
+//#endif
 
 	//マップ描画
 	/*for ( int StageY = 0; StageY < _MAP_Y; StageY++ ) {
@@ -367,139 +385,254 @@ void DrawStage() {
 			map[ StageY ][ StageX ].CoX -= Player.MapScrollX;
 		}
 	}
-
-#ifdef _DEBUGMODE
-	DrawCircle( ( Player.PlayerX / 32 ) * _MASS_X + _MASS_HALF, ( ( Player.PlayerY / 32 ) - 1 ) * _MASS_Y + _MASS_HALF, 2, 0xff00ff, TRUE );
-#endif
+	Player.Scroll=-map[0][0].CoX;
 
 }
+
 
 //プレイヤー描画
 void DrawPlayer() {
 
-	int PDrawMode = 0;	//0=動いてない、1 = 動いている(左右キー入力が入ってる)
-	static int JumpMode = 0;
+	static int PDrawMode = 0;	//0=動いてない、1=右動いている、 2=左動いてる
+	static int SlideMode = 0;	//1=右滑り、2=左滑り
+	int JumpMode = 0;
+	int InMode = 0;
+	int InMode2 = 0;
 
 	//歩くアニメーション
 	if( ( 0 == FR_Control.FrameCount % 4 ) && opt.NowK != NULL ){
-		if(Player.JumpFrame==0)Player.P_i_f++;
-		if(Player.P_i_f>=3 &&Player.JumpFrame==0)Player.P_i_f=0;
-		if(Player.JumpFrame>0)Player.P_i_f=3;
+		if ( Player.JumpFrame == 0 )	Player.P_i_f++;
+		if(Player.P_i_f >= 3 && Player.JumpFrame == 0 )	Player.P_i_f=0;
+		if ( Player.JumpFrame > 0 )	Player.P_i_f = 3;
 	}
 	if( opt.NowK == NULL ){
 		Player.P_i_f = 0;	//キー操作をやめた時
 	}
 
 	//歩行処理
-	//右
+	/*****     右移動処理     *****/
 	if ( Player.PlayerX <= ( 15 * _MASS_X + _MASS_HALF ) && ( opt.NowK & PAD_INPUT_RIGHT || opt.NowK & PAD_INPUT_Z ) ) {
-		PDrawMode = 1;
-		if ( Player.PSpeed < 4.0f ) {
-			Player.PSpeed += 0.2f;
-			/*Player.MapScrollX = Player.PSpeed;*/
-		}
 
-		if(map[Player.PlayerY/32][(Player.PlayerX/32)+1].MapNum==0)	Player.PlayerX += Player.PSpeed;	//プレイヤー移動
-		Player.P_lr_f=0;					//左右反転フラグ
-		if ( Player.PlayerX >= 6  * _MASS_X + _MASS_HALF ) {
-			Player.PlayerX -= Player.PSpeed;
-			Player.MapScrollX = Player.PSpeed;
+		/** 通常処理 **/
+		if ( PDrawMode == 0 || ( PDrawMode == 2 && Player.PSpeed <= 0.0f ) ) {
+			PDrawMode = 1;
 		}
-		if(Player.JumpFrame==0)Player.P_lr_f=0;
-		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, Player.P_lr_f );		//歩行時のプレイヤー描画
-		
-	}//左
-	else if ( Player.PlayerX >= ( 0 * _MASS_X + _MASS_HALF ) && ( opt.NowK & PAD_INPUT_LEFT || opt.NowK & PAD_INPUT_X ) ) {
-		PDrawMode = 1;
-		if ( Player.PSpeed < 4.0f ) {
-			Player.PSpeed += 0.2f;
-		}
-		if(map[Player.PlayerY/32][(Player.PlayerX/32)-1].MapNum==0)	Player.PlayerX -= Player.PSpeed;
-		if(Player.JumpFrame==0)Player.P_lr_f=1;
-		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, Player.P_lr_f );	//歩行時のプレイヤー描画
-	}
-	else {
-		if ( Player.PSpeed >= 0.0f ) {
-			Player.PSpeed -= 0.4f;
-			if ( Player.P_lr_f == 0 && ( Player.PlayerX < 5 * _MASS_X + _MASS_HALF ) ) { 
+		if ( PDrawMode == 1 ) {
+			if ( HitBlockRight() == _HIT_FALSE ) {
+				if ( Player.PSpeed < 6.0f ) {
+					Player.PSpeed += 0.2f;				//加速度設定
+				}
 				Player.PlayerX += Player.PSpeed;
-			} 
-			else if ( Player.P_lr_f == 1 && ( Player.PlayerX > 0 * _MASS_X + _MASS_HALF ) ) {
-				Player.PlayerX -= Player.PSpeed;
+			} else if ( HitBlockRight() == _HIT_TRUE ) {
+				Player.PSpeed = 0.0f;
 			}
+
+			//スクロールシステム
+			//if ( Player.PlayerX >= 6  * _MASS_X + _MASS_HALF ) {
+			//	Player.PlayerX -= Player.PSpeed;
+			//	Player.MapScrollX = Player.PSpeed;
+			//}
+
+			Player.P_lr_f = _DIRECT_RIGHT;					//左右反転フラグ
+			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, FALSE );		//歩行時のプレイヤー描画
 		}
+		/** 急ブレーキの処理 **/
+		if ( PDrawMode == 2 && Player.PSpeed > 0.0f ) {
+			Player.P_lr_f=0;					//左右反転フラグ
+			SlideMode = 1;
+			if ( HitBlockLeft() == _HIT_FALSE ) {
+				Player.PSpeed -= 0.4f;
+				if ( ( Player.PlayerX -= Player.PSpeed ) < ( 0 * _MASS_X + _MASS_HALF ) ) {
+					Player.PlayerX += Player.PSpeed;
+					Player.PSpeed = 0.0f;
+				}
+			} else if ( HitBlockLeft() == _HIT_TRUE ) {
+				Player.PSpeed = 0.0f;
+			}
+			if ( Player.PSpeed <= 0.0f ) {
+				Player.PSpeed = 0.0f;
+				PDrawMode = 1;
+			}
+			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[ 6 ], TRUE, FALSE );
+		}
+	}
+	/*****     左移動処理     *****/
+	else if ( Player.PlayerX > ( 0 * _MASS_X + _MASS_HALF ) && ( opt.NowK & PAD_INPUT_LEFT || opt.NowK & PAD_INPUT_X ) ) {
+
+		/** 通常処理 **/
+		if ( PDrawMode == 0 || ( PDrawMode == 1 && Player.PSpeed <= 0.0f ) ) {
+			PDrawMode = 2;
+		}
+		if ( PDrawMode == 2 ) {
+			InMode = 2;
+			if ( HitBlockLeft() == _HIT_FALSE ) {
+				if ( Player.PSpeed < 6.0f ) {
+					Player.PSpeed += 0.2f;			//加速度設定
+				}
+				Player.PlayerX -= Player.PSpeed;
+			} else if ( HitBlockLeft() == _HIT_TRUE ) {
+				Player.PSpeed = 0.0f;
+			}
+			Player.P_lr_f = _DIRECT_LEFT;					//左右反転フラグ
+			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, TRUE );			//歩行時のプレイヤー描画
+		}
+		/** 急ブレーキの処理 **/
+		if ( PDrawMode == 1 && Player.PSpeed > 0.0f /*PDrawMode == 4*/ ) {
+			SlideMode = 2;
+			InMode2 = 2;
+			Player.P_lr_f=1;					//左右反転フラグ
+			if ( HitBlockRight() == _HIT_FALSE ) {
+				Player.PSpeed -= 0.4f;
+				Player.PlayerX += Player.PSpeed;
+			} else if ( HitBlockRight() == _HIT_TRUE ) {
+				Player.PSpeed = 0.0f;
+			}
+			if ( Player.PSpeed <= 0.0f )	{
+				Player.PSpeed = 0.0f;
+				PDrawMode = 2;
+			}
+			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[ 6 ], TRUE, TRUE );
+		}
+	}
+	/*****  その他処理   *****/
+	else {
+		if ( Player.PSpeed > 0.0f ) {
+			Player.PSpeed -= 0.2f;
+			//if ( Player.PSpeed <= 0.0f && SlideMode == 2 )	Player.P_lr_f = _DIRECT_LEFT;
+			//if ( Player.PSpeed <= 0.0f && SlideMode == 1 )	Player.P_lr_f = _DIRECT_RIGHT;
+			/*****  マリオ滑り処理   *****/
+			if ( Player.PSpeed > 0.0f ) {
+				//右処理
+				if ( /*Player.P_lr_f == 0*/ PDrawMode == 1 && ( Player.PlayerX < 15 * _MASS_X + _MASS_HALF ) ) { 
+					if ( HitBlockRight() == _HIT_FALSE ) {
+						Player.PlayerX += Player.PSpeed;
+					} else if ( HitBlockRight() == _HIT_TRUE ) {
+						Player.PSpeed = 0.0f;
+					}
+					InMode2 = 3;
+				} 
+				//左処理
+				else if ( /*Player.P_lr_f == 1*/ PDrawMode == 2 && ( Player.PlayerX > 0 * _MASS_X + _MASS_HALF ) ) {
+					if ( HitBlockLeft() == _HIT_FALSE ) {
+						Player.PlayerX -= Player.PSpeed;
+					} else if ( HitBlockLeft() == _HIT_TRUE ) {
+						Player.PSpeed = 0.0f;
+					}
+				}
+			}
+			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[0], TRUE , Player.P_lr_f );
+		}
+		if ( Player.PSpeed <= 0.0f ) {
+			PDrawMode = 0;
+			Player.PSpeed = 0.0f;
+		}
+		InMode = 1;
 		Player.MapScrollX = 0;
 	}
 
-	/*****     ジャンプ処理     *****/
-	if( Player.JumpFrame == 0 && opt.Kflg & PAD_INPUT_M ) {
-		Player.JumpFrame++;
-	}
-	if ( Player.JumpFrame > 0 ) {
-		if ( Player.JumpFrame < 12 )Player.JF_f=1;
-		else if ( Player.JumpFrame < 18 )Player.JF_f=2;
-		else if ( Player.JumpFrame < 24 )Player.JF_f=3;
-		else if ( Player.JumpFrame < 30 )Player.JF_f=4;
-		else if ( Player.JumpFrame < 36 )Player.JF_f=5;
-		else if ( Player.JumpFrame < 47 )Player.JF_f=6;
-		if ( Player.JumpFrame == 47 ) {
-			Player.JumpFrame = 0;
+
+	/*****     落下処理     *****/
+	if ( HitBlockDown() == _HIT_FALSE ) {
+		if ( Player.PfallSpeed < 6.0f )	Player.PfallSpeed += 0.2f;
+		Player.PlayerY += ( int )Player.PfallSpeed;
+		//めり込み防止処理
+		if ( HitBlockDown() == _HIT_TRUE ) {
+			int Difference = 0;
+			Difference = ( Player.PlayerY + _MASS_HALF ) - map[ ( Player.PlayerY / 32 ) + 1 ][ Player.PlayerX/32 ].CoY;
+			Player.PlayerY -= Difference;
+			Player.PfallSpeed = 0.0f;
 		}
-		switch (Player.JF_f)
-		{
-		case 1:
-			Player.JumpFrame += 1;
-			Player.PlayerY -= 9;
-			if(map[((Player.PlayerY)/32)-1][(Player.PlayerX/32)].MapNum!=0)Player.JumpFrame=36;
-			break;
-		case 2:
-			Player.JumpFrame += 1;
-			Player.PlayerY -= 5;
-			if(map[Player.PlayerY/32-1][(Player.PlayerX/32)].MapNum!=0)Player.JumpFrame=30;
-			break;
-		case 3:
-			Player.JumpFrame += 1;
-			Player.PlayerY -= 3;
-			if(map[Player.PlayerY/32-1][(Player.PlayerX/32)].MapNum!=0)Player.JumpFrame=24;
-			break;
-		case 4:
-			Player.JumpFrame += 1;
-			Player.PlayerY += 3;
-			if(map[((Player.PlayerY-16)/32)+1][(Player.PlayerX/32)].MapNum!=0)Player.JumpFrame=0;
-			break;
-		case 5:
-			Player.JumpFrame += 1;
-			Player.PlayerY += 5;
-			if(map[((Player.PlayerY-16)/32)+1][(Player.PlayerX/32)].MapNum!=0)Player.JumpFrame=0;
-			break;
-		case 6:
-			Player.JumpFrame += 1;
-			Player.PlayerY += 9;
-			if(map[((Player.PlayerY-16)/32)+1][(Player.PlayerX/32)].MapNum!=0)Player.JumpFrame=0;
-			if(map[((Player.PlayerY-16)/32)+1][(Player.PlayerX/32)].MapNum==0)Player.JumpFrame=36;
-			break;
-		default:
-			break;
-		}
+	} 
+	else {
+		Player.PfallSpeed = 0.0f;
 	}
-	if(0!=Player.PlayerY%16 && Player.JumpFrame==0)	Player.PlayerY=(Player.PlayerY/16)*16;
-	if(map[((Player.PlayerY-16)/32)+1][(Player.PlayerX/32)].MapNum==0 && Player.JumpFrame==0)Player.JumpFrame=24;
+	
+	
+	//ジャンプ処理
+	//if( Player.JumpFrame == 0 && opt.Kflg & PAD_INPUT_M ) {
+	//	Player.JumpFrame++;
+	//}
+	//if(opt.NowK==PAD_INPUT_M){
+	//	Player.JumpTime++;
+	//}
+	//if ( Player.JumpFrame > 0 ) {
+	//	if ( Player.JumpFrame < 12 )	Player.JF_f = 1;
+	//	else if ( Player.JumpFrame < 18 )	Player.JF_f = 2;
+	//	else if ( Player.JumpFrame < 24 )	Player.JF_f = 3;
+	//	else if ( Player.JumpFrame < 30 )	Player.JF_f = 4;
+	//	else if ( Player.JumpFrame < 36 )	Player.JF_f = 5;
+	//	else if ( Player.JumpFrame < 47 )	Player.JF_f = 6;
+	//	if ( Player.JumpFrame == 47 ) {
+	//		Player.JumpFrame = 0;
+	//	}
+
+	//	switch ( Player.JF_f )
+	//	{
+	//		case 1:
+	//			Player.JumpFrame += 1;
+	//			Player.PlayerY -= 9;
+	//			if ( map[ ( Player.PlayerY / 32 ) - 1 ][ ( Player.PlayerX+Player.Scroll / 32 ) ].MapNum != 0 )	Player.JumpFrame = 36;
+	//			break;
+	//		case 2:
+	//			Player.JumpFrame += 1;
+	//			Player.PlayerY -= 5;
+	//			if ( map[ ( Player.PlayerY / 32 ) - 1 ][ ( Player.PlayerX+Player.Scroll / 32 ) ].MapNum != 0 )	Player.JumpFrame = 30;
+	//			break;
+	//		case 3:
+	//			Player.JumpFrame += 1;
+	//			Player.PlayerY -= 3;
+	//			if ( map[ ( Player.PlayerY / 32 ) - 1 ][ ( Player.PlayerX+Player.Scroll / 32 ) ].MapNum != 0 )	Player.JumpFrame = 24;
+	//			break;
+	//		case 4:
+	//			Player.JumpFrame += 1;
+	//			Player.PlayerY += 3;
+	//			if ( map[ ( ( Player.PlayerY - 16 ) / 32 ) + 1 ][ ( Player.PlayerX+Player.Scroll / 32 ) ].MapNum != 0 )	Player.JumpFrame=0;
+	//			break;
+	//		case 5:
+	//			Player.JumpFrame += 1;
+	//			Player.PlayerY += 5;
+	//			if ( map[ ( ( Player.PlayerY - 16 ) / 32 ) + 1 ][ ( Player.PlayerX+Player.Scroll / 32 ) ].MapNum != 0 )	Player.JumpFrame=0;
+	//			break;
+	//		case 6:
+	//			Player.JumpFrame += 1;
+	//			Player.PlayerY += 9;
+	//			if ( map[ ( ( Player.PlayerY - 16 ) / 32 ) + 1][ ( Player.PlayerX+Player.Scroll / 32 ) ].MapNum != 0 )	Player.JumpFrame=0;
+	//			if ( map[ ( ( Player.PlayerY - 16 ) / 32 ) + 1][ ( Player.PlayerX+Player.Scroll / 32 ) ].MapNum == 0 )	Player.JumpFrame=36;
+	//			break;
+	//		default:
+	//			break;
+	//	}
+	//}
+	//if ( 0 != Player.PlayerY % 16 && Player.JumpFrame == 0 )	Player.PlayerY = ( Player.PlayerY / 16 ) * 16;
+	//if ( map[ ( ( Player.PlayerY - 16 ) / 32 ) + 1 ][ ( Player.PlayerX / 32 ) ].MapNum == 0 && Player.JumpFrame == 0 )	Player.JumpFrame = 24;
 
 #ifdef _DEBUGMODE
-	DrawFormatString( 516,  50, 0xff0000, "OldK = %d", opt.OldK );		//OldK描画
-	DrawFormatString( 516,  80, 0xff0000, "NowK = %d", opt.NowK );		//NowK描画
-	DrawFormatString( 516, 110, 0xff0000, "PdrM = %d", PDrawMode );		//PDrawMode描画
-	DrawFormatString( 516, 140, 0xff0000, "LR_F = %d", Player.P_lr_f );	//P_lr_f描画
-	DrawFormatString( 516, 170, 0xff0000, "PlrX = %d", Player.PlayerX );//PlayerX描画
-	DrawFormatString( 516, 200, 0xff0000, "PlrY = %d", Player.PlayerY );	//PlayerY描画
-	DrawFormatString( 516, 240, 0xff0000, "CoX  = %d", map[ 10 ][ 1 ].CoX );//CoX描画
-	DrawFormatString( 516, 280, 0xff0000, "CoY  = %d", map[ 10 ][ 1 ].CoY );//CoY描画
-	DrawCircle(Player.PlayerX,Player.PlayerY,3,0x0000ff);
+	SetFontSize( 12 );
+	DrawFormatString( 420,  50, 0xff0000, "OldK = %d", opt.OldK );			//OldK描画
+	DrawFormatString( 420,  70, 0xff0000, "NowK = %d", opt.NowK );			//NowK描画
+	DrawFormatString( 420,  90, 0xff0000, "PdrM = %d", PDrawMode );			//PDrawMode描画
+	DrawFormatString( 420, 110, 0xff0000, "LR_F = %d", Player.P_lr_f );		//P_lr_f描画
+	DrawFormatString( 420, 130, 0xff0000, "PlrX = %d", Player.PlayerX );	//PlayerX描画
+	DrawFormatString( 420, 150, 0xff0000, "PlrY = %d", Player.PlayerY );	//PlayerY描画
+	DrawFormatString( 420, 170, 0xff0000, "Scrl = %d", Player.Scroll );		//Scroll描画
+	DrawFormatString( 420, 190, 0xff0000, "Pspd = %.2f", Player.PSpeed );	//PSpeed描画
+	DrawFormatString( 420, 210, 0xff0000, "InMd = %d", InMode );			//InMode描画
+	DrawFormatString( 420, 230, 0xff0000, "IMd2 = %d", InMode2 );			//InMode2描画
+	DrawFormatString( 420, 250, 0xff0000, "Slid = %d", SlideMode );			//InMode2描画
 #endif
 
 	//無動作時のプレイヤー描画
-	if ( PDrawMode == 0  && Player.JumpFrame==0)	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[0], TRUE , Player.P_lr_f );
-	if ( PDrawMode == 0  && Player.JumpFrame!=0)	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[4], TRUE , Player.P_lr_f );
+	//if ( ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpFrame == 0 )	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[0], TRUE , Player.P_lr_f );
+	//if ( ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpFrame != 0 )	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[4], TRUE , Player.P_lr_f );
+
+	if ( ( PDrawMode == 3 || PDrawMode == 0 ) && JumpMode == 0 )	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[0], TRUE , Player.P_lr_f );
+	if ( ( PDrawMode == 3 || PDrawMode == 0 ) && JumpMode != 0 )	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[4], TRUE , Player.P_lr_f );
+
+	DrawCircle( Player.PlayerX, Player.PlayerY, 2, 0xFF69B4, 1 );
+	DrawCircle( map[ ( ( Player.PlayerY )/32 ) ][ ( ( Player.PlayerX )/32 ) ].CoX, map[ ( ( Player.PlayerY )/32 ) ][ ( ( Player.PlayerX )/32 ) ].CoY, 2, 0x0000ff, 1 );
+	DrawCircle( Player.PlayerX - _MASS_HALF + 8, Player.PlayerY + _MASS_HALF, 2, 0xffff00, 1 );
+	DrawCircle( map[ ( ( Player.PlayerY )/32 ) + 1 ][ ( ( Player.PlayerX - _MASS_HALF + 8 )/32 ) ].CoX, map[ ( ( Player.PlayerY )/32 ) + 1 ][ ( ( Player.PlayerX - _MASS_HALF + 8 )/32 ) ].CoY, 2, 0x000000, 1 );
+	
 }
 
 //画像読込
@@ -513,12 +646,12 @@ int LoadImages() {
 	Pic.P_Walk[0]=Pic.Player[1];
 	Pic.P_Walk[1]=Pic.Player[2];
 	Pic.P_Walk[2]=Pic.Player[3];
-	Pic.P_Walk[3]=Pic.Player[2];
+	Pic.P_Walk[3]=Pic.Player[4];
 
 	return TRUE;
 }
 
-//マップ初期化
+//マップ初期処理
 void MapInit() {
 	for ( int StageY = 0; StageY < _MAP_ALLSIZE_Y; StageY++ ) {
 		for ( int StageX = 0; StageX < _MAP_ALLSIZE_X; StageX++ ) {
@@ -531,54 +664,54 @@ void MapInit() {
 	}
 }
 
-//当たり判定上ブロック
-int HitBlockUp( int MapX, int MapY ) {
+// int ComX, int ComY 
 
-	for ( int HitBlock = 0; HitBlock < _HITCHIP_ALL; HitBlock++ ) {
-		if ( map[ ( MapY / 32 ) - 1 ][ ( MapX / 32 ) ].MapNum == HitBlockNum[ HitBlock ] ) {
-			return TRUE;
+int HitBlockUp() {
+	for ( int i = 0; i < _HITBLOCK; i++ ) {
+		//if ( map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) - 1 ][ ( ( Player.PlayerX-_MASS_HALF )/32 ) ].MapNum == HitBlockNum[ i ] )	return _HIT_TRUE;
+		if ( map[ ( Player.PlayerY/32 ) - 1 ][ ( ( Player.PlayerX-_MASS_HALF+4 )/32 )  ].MapNum == HitBlockNum[ i ] 
+			|| map[ ( Player.PlayerY/32 ) - 1 ][ ( ( Player.PlayerX+_MASS_HALF-4 )/32 )  ].MapNum == HitBlockNum[ i ]  ) {
+				return _HIT_TRUE;
 		}
 	}
-
-	return FALSE;
-
+	
+	return _HIT_FALSE;
 }
 
-//当たり判定下ブロック
-int HitBlockDown( int MapX, int MapY ) {
-
-	for ( int HitBlock = 0; HitBlock < _HITCHIP_ALL; HitBlock++ ) {
-		if ( map[ ( Player.PlayerY / 32 ) + 1 ][ ( Player.PlayerX / 32 ) ].MapNum == HitBlockNum[ HitBlock ] ) {
-			return TRUE;
+int HitBlockDown() {
+	for ( int i = 0; i < _HITBLOCK; i++ ) {
+		//if ( Player.P_lr_f == 0 && map[ ( ( Player.PlayerY-_MASS_HALF )/32 ) + 1 ][ ( ( Player.PlayerX-_MASS_HALF )/32 )  ].MapNum == HitBlockNum[ i ] )		return _HIT_TRUE;
+		//if ( Player.P_lr_f == 1 && map[ ( ( Player.PlayerY-_MASS_HALF )/32 ) + 1 ][ ( ( Player.PlayerX-_MASS_HALF )/32 ) + 1  ].MapNum == HitBlockNum[ i ] )	return _HIT_TRUE;
+	
+		if ( map[ ( Player.PlayerY/32 ) + 1 ][ ( ( Player.PlayerX-_MASS_HALF+4 )/32 )  ].MapNum == HitBlockNum[ i ] 
+			|| map[ ( Player.PlayerY/32 ) + 1 ][ ( ( Player.PlayerX+_MASS_HALF-4 )/32 )  ].MapNum == HitBlockNum[ i ]  ) {
+				return _HIT_TRUE;
 		}
+	
 	}
-
-	return FALSE;
-
+	return _HIT_FALSE;
 }
 
-//当たり判定右ブロック
-int HitBlockRight( int MapX, int MapY ) {
-
-	for ( int HitBlock = 0; HitBlock < _HITCHIP_ALL; HitBlock++ ) {
-		if ( map[ ( Player.PlayerY / 32 ) ][ ( Player.PlayerX / 32 ) + 1 ].MapNum == HitBlockNum[ HitBlock ] ) {
-			return TRUE;
+int HitBlockRight() {
+	for ( int i = 0; i < _HITBLOCK; i++ ) {
+		//if ( map[ ( ( Player.PlayerY-_MASS_HALF )/32 ) ][ ( ( Player.PlayerX-_MASS_HALF )/32 ) + 1 ].MapNum == HitBlockNum[ i ] )	return _HIT_TRUE;
+		if ( map[ ( ( Player.PlayerY-_MASS_HALF+4 )/32 ) ][ ( ( Player.PlayerX-_MASS_HALF )/32 ) + 1 ].MapNum == HitBlockNum[ i ]
+			|| map[ ( ( Player.PlayerY+_MASS_HALF-4 )/32 ) ][ ( ( Player.PlayerX-_MASS_HALF )/32 ) + 1 ].MapNum == HitBlockNum[ i ]) {
+			return _HIT_TRUE;
 		}
 	}
-
-	return FALSE;
-
+	
+	return _HIT_FALSE;
 }
 
-//当たり判定左ブロック
-int HitBlockLeft( int MapX, int MapY ) {
-
-	for ( int HitBlock = 0; HitBlock < _HITCHIP_ALL; HitBlock++ ) {
-		if ( map[ ( Player.PlayerY / 32 ) ][ ( Player.PlayerX / 32 ) - 1 ].MapNum == HitBlockNum[ HitBlock ] ) {
-			return TRUE;
+int HitBlockLeft() {
+	for ( int i = 0; i < _HITBLOCK; i++ ) {
+		//if ( map[ ( ( Player.PlayerY-_MASS_HALF )/32 ) ][ ( ( Player.PlayerX-_MASS_HALF )/32 ) ].MapNum == HitBlockNum[ i ] )	return _HIT_TRUE;
+		if ( map[ ( ( Player.PlayerY-_MASS_HALF+4 )/32 ) ][ ( ( Player.PlayerX-_MASS_HALF )/32 ) ].MapNum == HitBlockNum[ i ]
+			|| map[ ( ( Player.PlayerY+_MASS_HALF-4 )/32 ) ][ ( ( Player.PlayerX-_MASS_HALF )/32 ) ].MapNum == HitBlockNum[ i ]) {
+			return _HIT_TRUE;
 		}
 	}
-
-	return FALSE;
-
+	
+	return _HIT_FALSE;
 }
