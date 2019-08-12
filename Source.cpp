@@ -119,12 +119,14 @@ typedef struct PLAYER {
 	float PSpeed;		//プレイヤースピード
 	int JumpFrame;		//ジャンプフレーム
 	int JumpTime;		//スペースキーの押された時間
+	int JumpMode;		//ジャンプ状態変数
+	int PJSpeed;		//ジャンプスピード
 	int P_i_f;			//歩行フレーム
 	int P_lr_f;			//歩行方向変数
 	int JF_f;
 	int MapScrollX;		//マップスクロールするのに必要なやつ
 	int Scroll;			//マップスクロールの現在量
-	float PfallSpeed;	//落下スピード
+	float PYSpeed;	//落下スピード
 	int PDirectMode;	//方向で処理帰るときの変数
 };
 //first 3,11
@@ -195,11 +197,8 @@ int LoadImages();	//画像読込
 
 int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow ) {
 
-
-
 	const int _WINDOWSIZE_X = 768;
 	const int _WINDOWSIZE_Y = 672;
-
 
 	GAMESTATE = GAME_TITLE;
 	SetMainWindowText( "Super Mairo Bros" );					//ウィンドウテキスト変更
@@ -209,8 +208,6 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	if ( DxLib_Init() == -1 )	return -1;		//Dxライブラリ初期化
 
 	int offscreen_handle = MakeScreen( 512, 448, FALSE );
-
-
 	SetDrawScreen( offscreen_handle );							//描画スクリーン変更
 	/********************     リフレッシュレート確認     *************************/
 	hdc = GetDC( GetMainWindowHandle() ) ;			// デバイスコンテキストの取得
@@ -329,8 +326,11 @@ void DrawEnd() {
 void GameInit() {
 
 	MapInit();
-	Player.PfallSpeed = 0.0f;
+	Player.PYSpeed = 0.0f;
 	Player.PSpeed = 0.0f;
+	Player.PJSpeed = 0.0f;
+	Player.JumpFrame = 0;
+	Player.JumpMode = FALSE;
 
 	GAMESTATE = GAME_MAIN;
 
@@ -355,14 +355,14 @@ void DrawStage() {
 	DrawBox( 0, 0, 512, 448, 0x5080f8, TRUE );
 	
 	//ライン描画
-//#ifdef _DEBUGMODE
-//	for ( int StageX = 0; StageX <= _MAP_X; StageX++ ) {
-//		DrawLine( StageX * _MASS_X, 0, StageX * _MASS_X, 448, 0xffffff );
-//	}
-//	for ( int StageY = 0; StageY < _MAP_Y ; StageY++ ) {
-//		DrawLine( 0, StageY * _MASS_Y, 512, StageY * _MASS_Y, 0xffffff );
-//	}
-//#endif
+#ifdef _DEBUGMODE
+	for ( int StageX = 0; StageX <= _MAP_X; StageX++ ) {
+		DrawLine( StageX * _MASS_X, 0, StageX * _MASS_X, 448, 0xffffff );
+	}
+	for ( int StageY = 0; StageY < _MAP_Y ; StageY++ ) {
+		DrawLine( 0, StageY * _MASS_Y, 512, StageY * _MASS_Y, 0xffffff );
+	}
+#endif
 
 	//マップ描画
 	/*for ( int StageY = 0; StageY < _MAP_Y; StageY++ ) {
@@ -395,9 +395,13 @@ void DrawPlayer() {
 
 	static int PDrawMode = 0;	//0=動いてない、1=右動いている、 2=左動いてる
 	static int SlideMode = 0;	//1=右滑り、2=左滑り
-	int JumpMode = 0;
+	static int JumpState = 1;	//ジャンプの状態を持っておく
 	int InMode = 0;
 	int InMode2 = 0;
+
+	if ( ( ( opt.NowK & PAD_INPUT_M ) == 0 ) && JumpState == 1 ) {
+		JumpState = 0;
+	}
 
 	//歩くアニメーション
 	if( ( 0 == FR_Control.FrameCount % 4 ) && opt.NowK != NULL ){
@@ -530,21 +534,97 @@ void DrawPlayer() {
 		Player.MapScrollX = 0;
 	}
 
+	/*****     ジャンプ処理     *****/
+	if ( JumpState == 0 && Player.JumpMode == FALSE && ( opt.NowK & PAD_INPUT_M ) ) {
+		Player.JumpMode = TRUE;
+		Player.JumpFrame = 0;
+		Player.PJSpeed = 7.0f;
+		JumpState = 2;
+	}
+	
+	if ( Player.JumpMode == TRUE ) {
+
+		//上方向のブロックの当たり判定
+		if ( HitBlockUp() == _HIT_TRUE ) {			//ヒットする場合
+			Player.PJSpeed = 0.0f;
+			Player.JumpMode = FALSE;
+			Player.JumpFrame = 0;
+		} else if ( HitBlockUp() == _HIT_FALSE ) {	//ヒットしない場合
+			if ( Player.JumpFrame++ < 6 ) {
+				if ( ( opt.NowK & PAD_INPUT_M ) == 0 ) {
+					JumpState = 3;
+				}
+			} else if ( Player.JumpFrame >= 6 && Player.JumpFrame < 20 ) {
+				if ( opt.NowK & PAD_INPUT_M ) {
+					if ( JumpState != 3 )	Player.PJSpeed =  6.0f;
+				} else if ( ( opt.NowK & PAD_INPUT_M ) == 0 ) { 
+					if ( Player.PJSpeed > 0.0f ) {
+						Player.PJSpeed -= 0.3f;
+					} else if ( Player.PJSpeed <= 0.0f ) {
+						Player.PJSpeed = 0.0f;
+						Player.JumpMode = FALSE;
+						Player.JumpFrame = 0;
+					}
+					JumpState = 3;
+				}
+			} else if ( Player.JumpFrame >= 20 ) {
+				if ( Player.PJSpeed > 0.0f ) {
+					Player.PJSpeed -= 0.4f;
+				} else if ( Player.PJSpeed <= 0.0f ) {
+					Player.PJSpeed = 0.0f;
+					Player.JumpMode = FALSE;
+					Player.JumpFrame = 0;
+				}
+			} 
+			Player.PlayerY -= Player.PJSpeed;
+			//else {
+			//	if ( Player.PJSpeed > 0.0f ) {
+			//		Player.PJSpeed -= 0.3f;
+			//	}
+			//	Player.PlayerY -= Player.PJSpeed;
+			//	if ( Player.PJSpeed <= 0.0f ) {
+			//		Player.PJSpeed = 0.0f;
+			//		Player.JumpMode = FALSE;
+			//		Player.JumpFrame = 0;
+			//	}
+			//}
+		}
+
+	} else if ( JumpState == 2 && Player.JumpMode == FALSE ) {
+		JumpState = 3;
+	}
+
+	//if ( Player.JumpMode == FALSE && ( opt.NowK & PAD_INPUT_M ) ) {
+	//	Player.JumpMode = TRUE;
+	//}
+
+	//if ( Player.JumpFrame < 16 && ( opt.NowK & PAD_INPUT_M ) ) {
+	//	Player.JumpFrame++;
+	//	Player.PlayerY -= 6.0f;
+	//	if ( Player.JumpFrame >= 16 ) {
+	//		Player.JumpMode = FALSE;
+	//	}
+	//}
 
 	/*****     落下処理     *****/
-	if ( HitBlockDown() == _HIT_FALSE ) {
-		if ( Player.PfallSpeed < 6.0f )	Player.PfallSpeed += 0.2f;
-		Player.PlayerY += ( int )Player.PfallSpeed;
+	if ( Player.JumpMode == FALSE && HitBlockDown() == _HIT_FALSE ) {
+		if ( Player.PYSpeed < 6.0f )	Player.PYSpeed += 0.6f;
+		Player.PlayerY += ( int )Player.PYSpeed;
 		//めり込み防止処理
 		if ( HitBlockDown() == _HIT_TRUE ) {
 			int Difference = 0;
 			Difference = ( Player.PlayerY + _MASS_HALF ) - map[ ( Player.PlayerY / 32 ) + 1 ][ Player.PlayerX/32 ].CoY;
 			Player.PlayerY -= Difference;
-			Player.PfallSpeed = 0.0f;
+			Player.PYSpeed = 0.0f;
 		}
 	} 
+	else if (Player.JumpMode == FALSE && HitBlockDown() == _HIT_TRUE ) {
+		if ( JumpState == 3 && ( opt.NowK & PAD_INPUT_M ) == 0 ) {
+			JumpState = 0;
+		}
+	}
 	else {
-		Player.PfallSpeed = 0.0f;
+		Player.PYSpeed = 0.0f;
 	}
 	
 	
@@ -606,6 +686,15 @@ void DrawPlayer() {
 	//if ( 0 != Player.PlayerY % 16 && Player.JumpFrame == 0 )	Player.PlayerY = ( Player.PlayerY / 16 ) * 16;
 	//if ( map[ ( ( Player.PlayerY - 16 ) / 32 ) + 1 ][ ( Player.PlayerX / 32 ) ].MapNum == 0 && Player.JumpFrame == 0 )	Player.JumpFrame = 24;
 
+	//無動作時のプレイヤー描画
+	//if ( ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpFrame == 0 )	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[0], TRUE , Player.P_lr_f );
+	//if ( ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpFrame != 0 )	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[4], TRUE , Player.P_lr_f );
+
+	if ( ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpMode == 0 /*JumpMode == 0*/ )	
+		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[0], TRUE , Player.P_lr_f );
+	if ( ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpMode != 0 /*JumpMode != 0*/ )	
+		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[4], TRUE , Player.P_lr_f );
+
 #ifdef _DEBUGMODE
 	SetFontSize( 12 );
 	DrawFormatString( 420,  50, 0xff0000, "OldK = %d", opt.OldK );			//OldK描画
@@ -619,20 +708,14 @@ void DrawPlayer() {
 	DrawFormatString( 420, 210, 0xff0000, "InMd = %d", InMode );			//InMode描画
 	DrawFormatString( 420, 230, 0xff0000, "IMd2 = %d", InMode2 );			//InMode2描画
 	DrawFormatString( 420, 250, 0xff0000, "Slid = %d", SlideMode );			//InMode2描画
-#endif
-
-	//無動作時のプレイヤー描画
-	//if ( ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpFrame == 0 )	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[0], TRUE , Player.P_lr_f );
-	//if ( ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpFrame != 0 )	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[4], TRUE , Player.P_lr_f );
-
-	if ( ( PDrawMode == 3 || PDrawMode == 0 ) && JumpMode == 0 )	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[0], TRUE , Player.P_lr_f );
-	if ( ( PDrawMode == 3 || PDrawMode == 0 ) && JumpMode != 0 )	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[4], TRUE , Player.P_lr_f );
+	DrawFormatString( 420, 270, 0xff0000, "JmpM = %d", JumpState );			//JumpMode描画
+	DrawFormatString( 420, 290, 0xff0000, "JmpM = %d", Player.JumpMode );	//InMode2描画
 
 	DrawCircle( Player.PlayerX, Player.PlayerY, 2, 0xFF69B4, 1 );
 	DrawCircle( map[ ( ( Player.PlayerY )/32 ) ][ ( ( Player.PlayerX )/32 ) ].CoX, map[ ( ( Player.PlayerY )/32 ) ][ ( ( Player.PlayerX )/32 ) ].CoY, 2, 0x0000ff, 1 );
 	DrawCircle( Player.PlayerX - _MASS_HALF + 8, Player.PlayerY + _MASS_HALF, 2, 0xffff00, 1 );
 	DrawCircle( map[ ( ( Player.PlayerY )/32 ) + 1 ][ ( ( Player.PlayerX - _MASS_HALF + 8 )/32 ) ].CoX, map[ ( ( Player.PlayerY )/32 ) + 1 ][ ( ( Player.PlayerX - _MASS_HALF + 8 )/32 ) ].CoY, 2, 0x000000, 1 );
-	
+#endif
 }
 
 //画像読込
@@ -669,8 +752,8 @@ void MapInit() {
 int HitBlockUp() {
 	for ( int i = 0; i < _HITBLOCK; i++ ) {
 		//if ( map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) - 1 ][ ( ( Player.PlayerX-_MASS_HALF )/32 ) ].MapNum == HitBlockNum[ i ] )	return _HIT_TRUE;
-		if ( map[ ( Player.PlayerY/32 ) - 1 ][ ( ( Player.PlayerX-_MASS_HALF+4 )/32 )  ].MapNum == HitBlockNum[ i ] 
-			|| map[ ( Player.PlayerY/32 ) - 1 ][ ( ( Player.PlayerX+_MASS_HALF-4 )/32 )  ].MapNum == HitBlockNum[ i ]  ) {
+		if ( map[ ( ( Player.PlayerY-_MASS_HALF )/32 ) ][ ( ( Player.PlayerX-_MASS_HALF+4 )/32 )  ].MapNum == HitBlockNum[ i ] 
+			|| map[ ( ( Player.PlayerY-_MASS_HALF )/32 ) ][ ( ( Player.PlayerX+_MASS_HALF-4 )/32 )  ].MapNum == HitBlockNum[ i ]  ) {
 				return _HIT_TRUE;
 		}
 	}
@@ -683,8 +766,8 @@ int HitBlockDown() {
 		//if ( Player.P_lr_f == 0 && map[ ( ( Player.PlayerY-_MASS_HALF )/32 ) + 1 ][ ( ( Player.PlayerX-_MASS_HALF )/32 )  ].MapNum == HitBlockNum[ i ] )		return _HIT_TRUE;
 		//if ( Player.P_lr_f == 1 && map[ ( ( Player.PlayerY-_MASS_HALF )/32 ) + 1 ][ ( ( Player.PlayerX-_MASS_HALF )/32 ) + 1  ].MapNum == HitBlockNum[ i ] )	return _HIT_TRUE;
 	
-		if ( map[ ( Player.PlayerY/32 ) + 1 ][ ( ( Player.PlayerX-_MASS_HALF+4 )/32 )  ].MapNum == HitBlockNum[ i ] 
-			|| map[ ( Player.PlayerY/32 ) + 1 ][ ( ( Player.PlayerX+_MASS_HALF-4 )/32 )  ].MapNum == HitBlockNum[ i ]  ) {
+		if ( map[ ( ( Player.PlayerY+_MASS_HALF )/32 ) ][ ( ( Player.PlayerX-_MASS_HALF+4 )/32 )  ].MapNum == HitBlockNum[ i ] 
+		|| map[ ( ( Player.PlayerY+_MASS_HALF )/32 ) ][ ( ( Player.PlayerX+_MASS_HALF-4 )/32 )  ].MapNum == HitBlockNum[ i ]  ) {
 				return _HIT_TRUE;
 		}
 	
@@ -695,8 +778,8 @@ int HitBlockDown() {
 int HitBlockRight() {
 	for ( int i = 0; i < _HITBLOCK; i++ ) {
 		//if ( map[ ( ( Player.PlayerY-_MASS_HALF )/32 ) ][ ( ( Player.PlayerX-_MASS_HALF )/32 ) + 1 ].MapNum == HitBlockNum[ i ] )	return _HIT_TRUE;
-		if ( map[ ( ( Player.PlayerY-_MASS_HALF+4 )/32 ) ][ ( ( Player.PlayerX-_MASS_HALF )/32 ) + 1 ].MapNum == HitBlockNum[ i ]
-			|| map[ ( ( Player.PlayerY+_MASS_HALF-4 )/32 ) ][ ( ( Player.PlayerX-_MASS_HALF )/32 ) + 1 ].MapNum == HitBlockNum[ i ]) {
+		if ( map[ ( ( Player.PlayerY-_MASS_HALF+4 )/32 ) ][ ( ( Player.PlayerX+_MASS_HALF )/32 ) ].MapNum == HitBlockNum[ i ]
+			|| map[ ( ( Player.PlayerY+_MASS_HALF-4 )/32 ) ][ ( ( Player.PlayerX+_MASS_HALF )/32 ) ].MapNum == HitBlockNum[ i ]) {
 			return _HIT_TRUE;
 		}
 	}
