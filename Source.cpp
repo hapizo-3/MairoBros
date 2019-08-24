@@ -179,10 +179,13 @@ typedef struct PLAYER {
 	int MapSSpeed;		//ƒ}ƒbƒvƒXƒNƒ[ƒ‹‚ÌŒ»İ—Ê
 	float PYSpeed;		//—‰ºƒXƒs[ƒh
 	int PDirectMode;	//•ûŒü‚Åˆ—‹A‚é‚Æ‚«‚Ì•Ï”
-	int PlayerState;	//ƒvƒŒƒCƒ„[‚Ìó‘Ô( 1=Mario, 2=SuperMario )
+	int PlayerState;	//ƒvƒŒƒCƒ„[‚Ìó‘Ô( 1=Mario, 2=SuperMario, 3=FireMario )
+	int PlayerAnime;	//ƒAƒjƒ[ƒVƒ‡ƒ“ó‘Ô(‘S‘Ì‚ªˆê“x~‚Ü‚éˆ—)
+	int PAnimeFrame;	//ƒvƒŒƒCƒ„[ƒAƒjƒ[ƒVƒ‡ƒ“ƒtƒŒ[ƒ€
 	int GoalFlg;		//ƒS[ƒ‹ƒtƒ‰ƒO
 	int DeathFlg;		//€–Sƒtƒ‰ƒO
 	int CoinNum;		//ƒRƒCƒ“‚Ì–‡”
+	int Point;			//ƒ|ƒCƒ“ƒg
 };
 //first 3,11
 PLAYER Player = { ( ( 3 * _MASS_X ) + _MASS_HALF ), ( 11 * _MASS_Y + _MASS_HALF ), 0, 0 };
@@ -248,6 +251,13 @@ int HitBlockUp( int oX, int oY, int pX, int pY, int jMode, int who );		//ƒuƒƒbƒ
 int HitBlockDown( int oX, int oY, int pX, int pY, int jMode, int who );		//ƒuƒƒbƒN‰º“–‚½‚è”»’è
 int HitBlockRight( int oX, int oY, int pX, int pY, int jMode, int who );		//ƒuƒƒbƒN‰E“–‚½‚è”»’è
 int HitBlockLeft( int oX, int oY, int pX, int pY,int jMode, int who );		//ƒuƒƒbƒN¶“–‚½‚è”»’è
+
+int HitObjUp( int oX, int oY, int pX, int pY, int heightRad, int widthRad );		//“G,ƒAƒCƒeƒ€‚Ì“–‚½‚è”»’èã
+int HitObjDown( int oX, int oY, int pX, int pY, int heightRad, int widthRad );		//“G,ƒAƒCƒeƒ€‚Ì“–‚½‚è”»’è‰º
+int HitObjRight( int oX, int oY, int pX, int pY, int heightRad, int widthRad );		//“G,ƒAƒCƒeƒ€‚Ì“–‚½‚è”»’è‰E
+int HitObjLeft( int oX, int oY, int pX, int pY, int heightRad, int widthRad );		//“G,ƒAƒCƒeƒ€‚Ì“–‚½‚è”»’è¶
+
+int HitObj( int oX, int oY, int pX, int pY, int heightRad, int widthRad );			//“–‚½‚è”»’è‘S•ûŒü
 
 int HitBlockUpBreak();	//ƒuƒƒbƒNã“–‚½‚è”»’èA”j‰ó”»’è
 
@@ -420,6 +430,8 @@ void GameInit() {
 	Player.PDirectMode = 0;
 	Player.PJSpeed = 0;
 	Player.PlayerState = _MARIO_NOMAL;
+	Player.PlayerAnime = 0;
+	Player.PlayerState = 1;
 
 	Item.HataX = 200 * _MASS_X;
 	Item.HataY = 2 * _MASS_Y + 5;
@@ -471,45 +483,43 @@ void DrawStage() {
 	//ƒ}ƒbƒv•`‰æ
 	for ( int StageY = 0; StageY < _MAP_ALLSIZE_Y; StageY++ ) {
 		for ( int StageX = 0; StageX < _MAP_ALLSIZE_X; StageX++ ) {
-
-			//ƒRƒCƒ“&ƒpƒ[ƒAƒbƒvƒAƒCƒeƒ€‚ÌƒAƒjƒ[ƒVƒ‡ƒ“
-			if ( map[ StageY ][ StageX ].ItemFlg == _ITEM_ANIME || map[ StageY ][ StageX ].ItemFlg == _ITEM_MOVIN ) {
-				//‰Šúˆ—(ƒnƒeƒiƒuƒƒbƒN•ÏX)
-				if ( map[ StageY ][ StageX ].MapNum == 2 || map[ StageY ][ StageX ].MapNum == 3 || map[ StageY ][ StageX ].MapNum == 4 || map[ StageY ][ StageX ].MapNum == 5 ) {
-					map[ StageY ][ StageX ].MapNum = 1;
-					if ( map[ StageY ][ StageX ].ItemType == _ITEMT_COIN ) {
-						Player.CoinNum++;
+			if ( Player.PlayerAnime == 0 ) {
+				//ƒRƒCƒ“&ƒpƒ[ƒAƒbƒvƒAƒCƒeƒ€‚ÌƒAƒjƒ[ƒVƒ‡ƒ“
+				if ( map[ StageY ][ StageX ].ItemFlg == _ITEM_ANIME || map[ StageY ][ StageX ].ItemFlg == _ITEM_MOVIN ) {
+					//‰Šúˆ—(ƒnƒeƒiƒuƒƒbƒN•ÏX)
+					if ( map[ StageY ][ StageX ].MapNum == 2 || map[ StageY ][ StageX ].MapNum == 3 || map[ StageY ][ StageX ].MapNum == 4 || map[ StageY ][ StageX ].MapNum == 5 ) {
+						map[ StageY ][ StageX ].MapNum = 1;
+						if ( map[ StageY ][ StageX ].ItemType == _ITEMT_COIN ) {
+							Player.CoinNum++;
+						}
 					}
-					//else if ( map[ StageY ][ StageX ].ItemType == _ITEMT_PWRUP ) {
-					//	Player.PlayerState = _MARIO_SUPER;
-					//}
+					if ( DrawItem( StageX, StageY ) == TRUE ) {
+						map[ StageY ][ StageX ].ItemFlg = _ITEM_NHAVE;
+					}
 				}
-				if ( DrawItem( StageX, StageY ) == TRUE ) {
-					map[ StageY ][ StageX ].ItemFlg = _ITEM_NHAVE;
+
+				//ƒnƒeƒiƒuƒƒbƒN‚ÌF‚Ì‘JˆÚ
+				if(map[StageY][StageX].MapNum==2||map[StageY][StageX].MapNum==3||map[StageY][StageX].MapNum==4||map[StageY][StageX].MapNum==5){
+					if(A_frame++<250)map[StageY][StageX].MapNum=2;
+					else if(A_frame<350)map[StageY][StageX].MapNum=4;
+					else if(A_frame<450)map[StageY][StageX].MapNum=5;
+					else if(A_frame<550)map[StageY][StageX].MapNum=4;
+					else if(A_frame==550)A_frame=0;
 				}
-			}
 
-			//ƒnƒeƒiƒuƒƒbƒN‚ÌF‚Ì‘JˆÚ
-			if(map[StageY][StageX].MapNum==2||map[StageY][StageX].MapNum==3||map[StageY][StageX].MapNum==4||map[StageY][StageX].MapNum==5){
-				if(A_frame++<250)map[StageY][StageX].MapNum=2;
-				else if(A_frame<350)map[StageY][StageX].MapNum=4;
-				else if(A_frame<450)map[StageY][StageX].MapNum=5;
-				else if(A_frame<550)map[StageY][StageX].MapNum=4;
-				else if(A_frame==550)A_frame=0;
-			}
-
-			//ƒuƒƒbƒN‚Ì‚Í‚Ë‚éˆ—
-			if(map[ StageY ][ StageX ].BU_F!=0){
-				switch(map[ StageY ][ StageX ].BU_F){
-					case 1:
-						map[ StageY ][ StageX ].Block_UP-=3;
-						if(map[ StageY ][ StageX ].Block_UP<-9)map[ StageY ][ StageX ].BU_F=2;
-						break;
-					case 2:
-						map[ StageY ][ StageX ].Block_UP+=3;
-						if(map[ StageY ][ StageX ].Block_UP==0)map[ StageY ][ StageX ].BU_F=0;
-						break;
+				//ƒuƒƒbƒN‚Ì‚Í‚Ë‚éˆ—
+				if(map[ StageY ][ StageX ].BU_F!=0){
+					switch(map[ StageY ][ StageX ].BU_F){
+						case 1:
+							map[ StageY ][ StageX ].Block_UP-=3;
+							if(map[ StageY ][ StageX ].Block_UP<-9)map[ StageY ][ StageX ].BU_F=2;
+							break;
+						case 2:
+							map[ StageY ][ StageX ].Block_UP+=3;
+							if(map[ StageY ][ StageX ].Block_UP==0)map[ StageY ][ StageX ].BU_F=0;
+							break;
 				
+					}
 				}
 			}
 
@@ -546,23 +556,6 @@ int DrawItem( int iX, int iY /*, int iType, int iFrame*/ ) {
 
 	//ƒRƒCƒ“‚Ì•`‰æ
 	if ( map[ iY ][ iX ].ItemType == _ITEMT_COIN ) {
-
-		//if ( map[ iY ][ iX ].ItemTrans++ < 2 ) {
-		//	map[ iY ][ iX ].ItemTrans = 27;
-		//}
-		//else if ( map[ iY ][ iX ].ItemTrans >= 3 && map[ iY ][ iX ].ItemTrans < 4 ) {
-		//	map[ iY ][ iX ].ItemTrans = 28;
-		//}
-		//else if ( map[ iY ][ iX ].ItemTrans >= 5 && map[ iY ][ iX ].ItemTrans < 6 ) {
-		//	map[ iY ][ iX ].ItemTrans = 29;
-		//}
-		//else if ( map[ iY ][ iX ].ItemTrans >= 7 && map[ iY ][ iX ].ItemTrans < 8 ) {
-		//	map[ iY ][ iX ].ItemTrans = 30;
-		//}
-		//else if ( map[ iY ][ iX ].ItemFrame >= 9 ) {
-		//	map[ iY ][ iX ].ItemTrans = 27;
-		//}
-
 		if ( map[ iY ][ iX ].ItemTrans++ > 6 ) {
 			map[ iY ][ iX ].ItemTrans = 0;
 		}
@@ -581,58 +574,76 @@ int DrawItem( int iX, int iY /*, int iType, int iFrame*/ ) {
 	//ƒpƒ[ƒAƒbƒvƒLƒmƒR‚Ì•`‰æ
 	if ( map[ iY ][ iX ].ItemType == _ITEMT_PWRUP ) {
 
-		if ( map[ iY ][ iX ].ItemFrame++ < 1 ) {
-			map[ iY ][ iX ].ItemY -= 10;
-		}
-		else if ( map[ iY ][ iX ].ItemFrame < 25 ) {
-			map[ iY ][ iX ].ItemY -= 1;
-		}
-		else if ( map[ iY ][ iX ].ItemFrame >= 26 && map[ iY ][ iX ].ItemFrame < 27 ) {
-			//map[ iY ][ iX ].ItemFlg = _ITEM_MOVIN;
-		}
-		else if ( map[ iY ][ iX ].ItemFrame >= 28 ) {
-
-			//¶‰E‚É“®‚­
-			if ( map[ iY ][ iX ].ItemDirect == _DIRECT_RIGHT ) {
-				if ( HitBlockRight( map[ iY ][ iX ].ItemX + Player.MapScrollX, map[ iY ][ iX ].ItemY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PWRUP ) == _HIT_FALSE ) {
-					map[ iY ][ iX ].ItemX += 2;
-				} else if ( HitBlockRight( map[ iY ][ iX ].ItemX + Player.MapScrollX, map[ iY ][ iX ].ItemY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PWRUP ) == _HIT_TRUE ) {
-					map[ iY ][ iX ].ItemDirect = _DIRECT_LEFT;
+		//ƒm[ƒ}ƒ‹ƒ}ƒŠƒI‚ªƒLƒmƒR‚ğæ‚éˆ—
+		if ( Player.PlayerState == 1 ) {
+			if ( map[ iY ][ iX ].ItemFrame++ < 1 ) {
+				map[ iY ][ iX ].ItemY -= 10;
+			}
+			else if ( map[ iY ][ iX ].ItemFrame < 25 ) {
+				map[ iY ][ iX ].ItemY -= 1;
+			}
+			else if ( map[ iY ][ iX ].ItemFrame >= 28 ) {
+				//¶‰E‚É“®‚­
+				if ( map[ iY ][ iX ].ItemDirect == _DIRECT_RIGHT ) {
+					if ( HitBlockRight( map[ iY ][ iX ].ItemX + Player.MapScrollX, map[ iY ][ iX ].ItemY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PWRUP ) == _HIT_FALSE ) {
+						map[ iY ][ iX ].ItemX += 2;
+					} else if ( HitBlockRight( map[ iY ][ iX ].ItemX + Player.MapScrollX, map[ iY ][ iX ].ItemY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PWRUP ) == _HIT_TRUE ) {
+						map[ iY ][ iX ].ItemDirect = _DIRECT_LEFT;
+					}
+				}
+				else if ( map[ iY ][ iX ].ItemDirect == _DIRECT_LEFT ) {
+					if ( HitBlockLeft( map[ iY ][ iX ].ItemX + Player.MapScrollX, map[ iY ][ iX ].ItemY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PWRUP ) == _HIT_FALSE ) {
+						map[ iY ][ iX ].ItemX -= 2;
+					} else if ( HitBlockLeft( map[ iY ][ iX ].ItemX + Player.MapScrollX, map[ iY ][ iX ].ItemY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PWRUP ) == _HIT_TRUE ) {
+						map[ iY ][ iX ].ItemDirect = _DIRECT_RIGHT;
+					}
+				}
+				/*****     —‰ºˆ—     *****/
+				if ( HitBlockDown( map[ iY ][ iX ].ItemX + Player.MapScrollX, map[ iY ][ iX ].ItemY, _MASS_HALF , _MASS_HALF, FALSE, _HITW_PWRUP ) == _HIT_FALSE ) {
+					if ( map[ iY ][ iX ].IYSpeed < 8.0f )	map[ iY ][ iX ].IYSpeed += 0.8f;
+					map[ iY ][ iX ].ItemY += ( int )map[ iY ][ iX ].IYSpeed;
+				} else {
+					map[ iY ][ iX ].IYSpeed = 0.0f;
 				}
 			}
-			else if ( map[ iY ][ iX ].ItemDirect == _DIRECT_LEFT ) {
-				if ( HitBlockLeft( map[ iY ][ iX ].ItemX + Player.MapScrollX, map[ iY ][ iX ].ItemY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PWRUP ) == _HIT_FALSE ) {
-					map[ iY ][ iX ].ItemX -= 2;
-				} else if ( HitBlockLeft( map[ iY ][ iX ].ItemX + Player.MapScrollX, map[ iY ][ iX ].ItemY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PWRUP ) == _HIT_TRUE ) {
-					map[ iY ][ iX ].ItemDirect = _DIRECT_RIGHT;
+			//“–‚½‚è”»’è
+			if ( HitObj( Player.PlayerX, Player.PlayerY, map[ iY ][ iX ].ItemX, map[ iY ][ iX ].ItemY, _MASS_HALF, _MASS_HALF ) == _HIT_TRUE ) {
+				Player.PlayerState = 2;
+				Player.PlayerAnime = 1;
+				return TRUE;
+			}
+			//‰æ–Ê”ƒ‚¢‚ÉÁ‚¦‚½ê‡
+			if ( map[ iY ][ iX ].ItemY >= ( 15 * _MASS_Y ) || map[ iY ][ iX ].ItemX >= ( 15 * _MASS_X ) || map[ iY ][ iX ].ItemX < ( 0 - _MASS_X ) ) {
+				return TRUE;
+			}
+			//•`‰æ
+			DrawRotaGraph( map[ iY ][ iX ].ItemX, map[ iY ][ iX ].ItemY, 1.0f, 0, Pic.StageBlock[ 13 ], TRUE );
+		}
+		//ƒX[ƒp[ƒ}ƒŠƒI‚©ƒtƒ@ƒCƒ„[ƒ}ƒŠƒI‚Ì‚Ìˆ—
+		else if ( Player.PlayerState >= 2 ) {
+			if ( map[ iY ][ iX ].ItemFrame++ < 1 ) {
+				map[ iY ][ iX ].ItemY -= 10;
+			}
+			else if ( map[ iY ][ iX ].ItemFrame < 25 ) {
+				map[ iY ][ iX ].ItemY -= 1;
+			}
+			//“–‚½‚è”»’è
+			if ( HitObj( Player.PlayerX, Player.PlayerY, map[ iY ][ iX ].ItemX, map[ iY ][ iX ].ItemY, _MASS_HALF, _MASS_HALF ) == _HIT_TRUE ) {
+				if ( Player.PlayerState == 2 ) {
+					Player.PlayerAnime = 1;
+					Player.PlayerState = 3;
+				} else if ( Player.PlayerState == 3 ) {
+					Player.Point += 100;
 				}
+				return TRUE;
 			}
-
-			/*****     —‰ºˆ—     *****/
-			if ( HitBlockDown( map[ iY ][ iX ].ItemX + Player.MapScrollX, map[ iY ][ iX ].ItemY, _MASS_HALF , _MASS_HALF, FALSE, _HITW_PWRUP ) == _HIT_FALSE ) {
-				if ( map[ iY ][ iX ].IYSpeed < 8.0f )	map[ iY ][ iX ].IYSpeed += 0.8f;
-				map[ iY ][ iX ].ItemY += ( int )map[ iY ][ iX ].IYSpeed;
-				//‚ß‚è‚İ–h~ˆ—
-				//if ( HitBlockDown( map[ iY ][ iX ].ItemX, map[ iY ][ iX ].ItemY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PWRUP ) == _HIT_TRUE ) {
-				//	int Difference = 0;
-				//	Difference = ( map[ iY ][ iX ].ItemY + _MASS_HALF ) - map[ ( map[ iY ][ iX ].ItemY / 32 ) + 1 ][ ( Player.MapScrollX + map[ iY ][ iX ].ItemX )/32 ].CoY;
-				//	map[ iY ][ iX ].ItemY -= Difference;
-				//	map[ iY ][ iX ].IYSpeed = 0.0f;
-				//}
-			} else {
-				map[ iY ][ iX ].IYSpeed = 0.0f;
+			//‰æ–ÊŠO‚¾‚ÆÁ‚¦‚éˆ—
+			if ( map[ iY ][ iX ].ItemY >= ( 15 * _MASS_Y ) || map[ iY ][ iX ].ItemX >= ( 15 * _MASS_X ) || map[ iY ][ iX ].ItemX < ( 0 - _MASS_X ) ) {
+				return TRUE;
 			}
-
+			//•`‰æ
+			DrawRotaGraph( map[ iY ][ iX ].ItemX, map[ iY ][ iX ].ItemY, 1.0f, 0, Pic.StageBlock[ 25 ], TRUE );
 		}
-
-		if ( map[ iY ][ iX ].ItemY >= ( 15 * _MASS_Y ) || map[ iY ][ iX ].ItemX >= ( 15 * _MASS_X ) || map[ iY ][ iX ].ItemX < ( 0 - _MASS_X ) ) {
-			return TRUE;
-		}
-		
-		//if ( map[ iY ][ iX ].ItemFrame > 30 ) {
-		//	return TRUE;
-		//}
-		DrawRotaGraph( map[ iY ][ iX ].ItemX, map[ iY ][ iX ].ItemY, 1.0f, 0, Pic.StageBlock[ 13 ], TRUE );
 	}
 
 	return FALSE;
@@ -648,19 +659,20 @@ void DrawPlayer() {
 	int InMode = 0;
 	int InMode2 = 0;
 	int WalkMove = 9 - ( int )Player.PSpeed;
-
 	if ( ( ( opt.NowK & PAD_INPUT_M ) == 0 ) && JumpState == 1 ) {
 		JumpState = 0;
 	}
 
 	//•à‚­ƒAƒjƒ[ƒVƒ‡ƒ“
-	if( ( 0 == FR_Control.FrameCount % WalkMove ) && /*opt.NowK != NULL*/ Player.PSpeed >= 0.0f ){
-		if ( Player.JumpFrame == 0 )	Player.P_i_f++;
-		if(Player.P_i_f >= 3 && Player.JumpFrame == 0 )	Player.P_i_f=0;
-		if ( Player.JumpFrame > 0 )	Player.P_i_f = 3;
-	}
-	else if( Player.PSpeed <= 0.0f ){
-		Player.P_i_f = 0;	//ƒL[‘€ì‚ğ‚â‚ß‚½
+	if ( Player.PlayerAnime == 0 ) {
+		if( ( 0 == FR_Control.FrameCount % WalkMove ) && /*opt.NowK != NULL*/ Player.PSpeed >= 0.0f ){
+			if ( Player.JumpFrame == 0 )	Player.P_i_f++;
+			if(Player.P_i_f >= 3 && Player.JumpFrame == 0 )	Player.P_i_f=0;
+			if ( Player.JumpFrame > 0 )	Player.P_i_f = 3;
+		}
+		else if( Player.PSpeed <= 0.0f ){
+			Player.P_i_f = 0;	//ƒL[‘€ì‚ğ‚â‚ß‚½
+		}
 	}
 
 	//•àsˆ—
@@ -672,29 +684,31 @@ void DrawPlayer() {
 			PDrawMode = 1;
 		}
 		if ( PDrawMode == 1 ) {
-			if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
-				if ( Player.PSpeed < 6.0f ) {
-					Player.PSpeed += 0.2f;				//‰Á‘¬“xİ’è
-				}
+			if ( Player.PlayerAnime == 0 ) {
+				if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
+					if ( Player.PSpeed < 6.0f ) {
+						Player.PSpeed += 0.2f;				//‰Á‘¬“xİ’è
+					}
 
-				if ( Player.PlayerX < ( 8 * _MASS_X + _MASS_HALF ) && ( Player.MapScrollX + Player.PlayerX <= ( 200 * _MASS_X + _MASS_HALF ) ) ) {
-					Player.PlayerX += Player.PSpeed;
+					if ( Player.PlayerX < ( 8 * _MASS_X + _MASS_HALF ) && ( Player.MapScrollX + Player.PlayerX <= ( 200 * _MASS_X + _MASS_HALF ) ) ) {
+						Player.PlayerX += Player.PSpeed;
+					}
+					else if ( Player.PlayerX >= ( 8 * _MASS_X + _MASS_HALF ) ) {
+						Player.MapSSpeed = Player.PSpeed;
+						Player.MapScrollX += Player.MapSSpeed;
+					}
+				
+				} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
+					Player.PSpeed = 0.0f;
+					Player.MapSSpeed = 0;
+				} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
+					Player.GoalFlg = 1;
+					Player.PSpeed = 0.0f;
+					Player.MapSSpeed = 0;
+					Player.PJSpeed = 0;
+					JumpState = 0;
+					Player.JumpFrame = 0;
 				}
-				else if ( Player.PlayerX >= ( 8 * _MASS_X + _MASS_HALF ) ) {
-					Player.MapSSpeed = Player.PSpeed;
-					Player.MapScrollX += Player.MapSSpeed;
-				}
-					
-			} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
-				Player.PSpeed = 0.0f;
-				Player.MapSSpeed = 0;
-			} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
-				Player.GoalFlg = 1;
-				Player.PSpeed = 0.0f;
-				Player.MapSSpeed = 0;
-				Player.PJSpeed = 0;
-				JumpState = 0;
-				Player.JumpFrame = 0;
 			}
 			Player.P_lr_f = _DIRECT_RIGHT;					//¶‰E”½“]ƒtƒ‰ƒO
 			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, FALSE );		//•às‚ÌƒvƒŒƒCƒ„[•`‰æ
@@ -703,23 +717,25 @@ void DrawPlayer() {
 		if ( PDrawMode == 2 && Player.PSpeed > 0.0f ) {
 			Player.P_lr_f=0;					//¶‰E”½“]ƒtƒ‰ƒO
 			SlideMode = 1;
-			if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
-				Player.PSpeed -= 0.4f;
-				if ( ( Player.PlayerX -= Player.PSpeed ) < ( 0 * _MASS_X + _MASS_HALF ) ) {
-					Player.PlayerX += Player.PSpeed;
+			if ( Player.PlayerAnime == 0 ) {
+				if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
+					Player.PSpeed -= 0.4f;
+					if ( ( Player.PlayerX -= Player.PSpeed ) < ( 0 * _MASS_X + _MASS_HALF ) ) {
+						Player.PlayerX += Player.PSpeed;
+						Player.PSpeed = 0.0f;
+						Player.MapSSpeed = 0;
+					}
+				} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
 					Player.PSpeed = 0.0f;
 					Player.MapSSpeed = 0;
+				} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
+					GAMESTATE = GAME_GOAL;
 				}
-			} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
-				Player.PSpeed = 0.0f;
-				Player.MapSSpeed = 0;
-			} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
-				GAMESTATE = GAME_GOAL;
-			}
-			if ( Player.PSpeed <= 0.0f ) {
-				Player.PSpeed = 0.0f;
-				Player.MapSSpeed = 0;
-				PDrawMode = 1;
+				if ( Player.PSpeed <= 0.0f ) {
+					Player.PSpeed = 0.0f;
+					Player.MapSSpeed = 0;
+					PDrawMode = 1;
+				}
 			}
 			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[ 6 ], TRUE, FALSE );
 		}
@@ -733,16 +749,18 @@ void DrawPlayer() {
 		}
 		if ( PDrawMode == 2 ) {
 			InMode = 2;
-			if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
-				if ( Player.PSpeed < 6.0f ) {
-					Player.PSpeed += 0.2f;			//‰Á‘¬“xİ’è
+			if ( Player.PlayerAnime == 0 ) {
+				if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
+					if ( Player.PSpeed < 6.0f ) {
+						Player.PSpeed += 0.2f;			//‰Á‘¬“xİ’è
+					}
+					Player.PlayerX -= Player.PSpeed;
+				} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
+					Player.PSpeed = 0.0f;
+					Player.MapSSpeed = 0;
+				} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
+					GAMESTATE = GAME_GOAL;
 				}
-				Player.PlayerX -= Player.PSpeed;
-			} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
-				Player.PSpeed = 0.0f;
-				Player.MapSSpeed = 0;
-			} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
-				GAMESTATE = GAME_GOAL;
 			}
 			Player.P_lr_f = _DIRECT_LEFT;					//¶‰E”½“]ƒtƒ‰ƒO
 			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, TRUE );			//•às‚ÌƒvƒŒƒCƒ„[•`‰æ
@@ -752,30 +770,32 @@ void DrawPlayer() {
 			SlideMode = 2;
 			InMode2 = 2;
 			Player.P_lr_f=1;					//¶‰E”½“]ƒtƒ‰ƒO
-			if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
-				Player.PSpeed -= 0.4f;
-				if ( Player.PlayerX < ( 8 * _MASS_X + _MASS_HALF ) && ( Player.MapScrollX + Player.PlayerX < ( 200 * _MASS_X + _MASS_HALF ) ) ) {
-					Player.PlayerX += Player.PSpeed;
+			if ( Player.PlayerAnime == 0 ) {
+				if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
+					Player.PSpeed -= 0.4f;
+					if ( Player.PlayerX < ( 8 * _MASS_X + _MASS_HALF ) && ( Player.MapScrollX + Player.PlayerX < ( 200 * _MASS_X + _MASS_HALF ) ) ) {
+						Player.PlayerX += Player.PSpeed;
+					}
+					else if ( Player.PlayerX >= ( 8 * _MASS_X + _MASS_HALF ) ) {
+						Player.MapSSpeed = Player.PSpeed;
+						Player.MapScrollX += Player.MapSSpeed;
+					}
+				} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
+					Player.PSpeed = 0.0f;
+					Player.MapSSpeed = 0;
+				} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
+					Player.GoalFlg = 1;
+					Player.PSpeed = 0.0f;
+					Player.MapSSpeed = 0;
+					Player.PJSpeed = 0;
+					JumpState = 0;
+					Player.JumpFrame = 0;
 				}
-				else if ( Player.PlayerX >= ( 8 * _MASS_X + _MASS_HALF ) ) {
-					Player.MapSSpeed = Player.PSpeed;
-					Player.MapScrollX += Player.MapSSpeed;
+				if ( Player.PSpeed <= 0.0f )	{
+					Player.PSpeed = 0.0f;
+					Player.MapSSpeed = 0;
+					PDrawMode = 2;
 				}
-			} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
-				Player.PSpeed = 0.0f;
-				Player.MapSSpeed = 0;
-			} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
-				Player.GoalFlg = 1;
-				Player.PSpeed = 0.0f;
-				Player.MapSSpeed = 0;
-				Player.PJSpeed = 0;
-				JumpState = 0;
-				Player.JumpFrame = 0;
-			}
-			if ( Player.PSpeed <= 0.0f )	{
-				Player.PSpeed = 0.0f;
-				Player.MapSSpeed = 0;
-				PDrawMode = 2;
 			}
 			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[ 6 ], TRUE, TRUE );
 		}
@@ -783,41 +803,43 @@ void DrawPlayer() {
 	/*****  ‚»‚Ì‘¼ˆ—   *****/
 	else {
 		if ( Player.PSpeed > 0.0f ) {
-			Player.PSpeed -= 0.2f;
-			/*****  ƒ}ƒŠƒIŠŠ‚èˆ—   *****/
-			if ( Player.PSpeed > 0.0f ) {
-				//‰Eˆ—
-				if ( PDrawMode == 1 && ( Player.PlayerX < 15 * _MASS_X + _MASS_HALF ) ) { 
-					if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
-						if ( Player.PlayerX < ( 8 * _MASS_X + _MASS_HALF ) && ( Player.MapScrollX + Player.PlayerX <= ( 200 * _MASS_X + _MASS_HALF ) ) ) {
-							Player.PlayerX += Player.PSpeed;
+			if ( Player.PlayerAnime == 0 ) {
+				Player.PSpeed -= 0.2f;
+				/*****  ƒ}ƒŠƒIŠŠ‚èˆ—   *****/
+				if ( Player.PSpeed > 0.0f ) {
+					//‰Eˆ—
+					if ( PDrawMode == 1 && ( Player.PlayerX < 15 * _MASS_X + _MASS_HALF ) ) { 
+						if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
+							if ( Player.PlayerX < ( 8 * _MASS_X + _MASS_HALF ) && ( Player.MapScrollX + Player.PlayerX <= ( 200 * _MASS_X + _MASS_HALF ) ) ) {
+								Player.PlayerX += Player.PSpeed;
+							}
+							else if ( Player.PlayerX >= ( 8 * _MASS_X + _MASS_HALF ) ) {
+								Player.MapSSpeed = Player.PSpeed;
+								Player.MapScrollX += Player.MapSSpeed;
+							}
+						} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
+							Player.PSpeed = 0.0f;
+							Player.MapSSpeed = 0;
+						} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
+							Player.GoalFlg = 1;
+							Player.PSpeed = 0.0f;
+							Player.MapSSpeed = 0;
+							Player.PJSpeed = 0;
+							JumpState = 0;
+							Player.JumpFrame = 0;
 						}
-						else if ( Player.PlayerX >= ( 8 * _MASS_X + _MASS_HALF ) ) {
-							Player.MapSSpeed = Player.PSpeed;
-							Player.MapScrollX += Player.MapSSpeed;
+						InMode2 = 3;
+					} 
+					//¶ˆ—
+					else if ( PDrawMode == 2 && ( Player.PlayerX > 0 * _MASS_X + _MASS_HALF ) ) {
+						if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
+							Player.PlayerX -= Player.PSpeed;
+						} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
+							Player.PSpeed = 0.0f;
+							Player.MapSSpeed = 0;
+						} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
+							GAMESTATE = GAME_GOAL;
 						}
-					} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
-						Player.PSpeed = 0.0f;
-						Player.MapSSpeed = 0;
-					} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
-						Player.GoalFlg = 1;
-						Player.PSpeed = 0.0f;
-						Player.MapSSpeed = 0;
-						Player.PJSpeed = 0;
-						JumpState = 0;
-						Player.JumpFrame = 0;
-					}
-					InMode2 = 3;
-				} 
-				//¶ˆ—
-				else if ( PDrawMode == 2 && ( Player.PlayerX > 0 * _MASS_X + _MASS_HALF ) ) {
-					if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
-						Player.PlayerX -= Player.PSpeed;
-					} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
-						Player.PSpeed = 0.0f;
-						Player.MapSSpeed = 0;
-					} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
-						GAMESTATE = GAME_GOAL;
 					}
 				}
 			}
@@ -839,47 +861,48 @@ void DrawPlayer() {
 		JumpState = 2;
 	}
 	
-	if ( Player.JumpMode == TRUE ) {
+	if ( Player.PlayerAnime == 0 ) {
+		if ( Player.JumpMode == TRUE ) {
 
-		//ã•ûŒü‚ÌƒuƒƒbƒN‚Ì“–‚½‚è”»’è
-		if ( HitBlockUp( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {			
-			//^‚ñ’†‚Éƒqƒbƒg‚·‚éê‡
-			//map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].BU_F=1;
-			Player.PJSpeed = 0.0f;
-			Player.JumpMode = FALSE;
-			Player.JumpFrame = 0;
-		//} else if ( HitBlockUp( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_ITEM ) {
-		//	//map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum = 1;
-		//	Player.PJSpeed = 0.0f;
-		//	Player.JumpMode = FALSE;
-		//	Player.JumpFrame = 0;
-		//} else if ( HitBlockUp( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_BREAK ) {	
-		//	//^‚ñ’†‚Éƒqƒbƒg‚µ‚½ê‡(”j‰ó)
-		//	Player.PJSpeed = 0.0f;
-		//	Player.JumpMode = FALSE;
-		//	Player.JumpFrame = 0;
-		} else if ( HitBlockUp( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_LEFT ) {	
-			//(ƒ}ƒŠƒI‚Ì)¶‘¤‚É“–‚½‚Á‚½
-			int Difference = 0;
-			Difference = map[ ( Player.PlayerY-_MASS_HALF+4 )/32][ ( ( Player.MapScrollX+Player.PlayerX )+_MASS_HALF-4 )/32 ].CoX -
-							( ( Player.PlayerX ) - _MASS_HALF + 4 );
-			Player.PlayerX += Difference;
-		} else if ( HitBlockUp( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_RIGHT ) {	
-			//(ƒ}ƒŠƒI‚Ì)¶‘¤‚É“–‚½‚Á‚½
-			int Difference = 0;
-			Difference = ( ( Player.PlayerX )+_MASS_HALF-4 ) - 
-						map[ ( Player.PlayerY-_MASS_HALF+4 )/32 ][ ( ( Player.MapScrollX+Player.PlayerX )+_MASS_HALF-4 )/32 ].CoX;
-			Player.PlayerX -= Difference;
-		} else if ( HitBlockUp( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {	
-			//ƒqƒbƒg‚µ‚È‚¢ê‡
-			if ( Player.JumpFrame++ < 6 ) {
-				if ( ( opt.NowK & PAD_INPUT_M ) == 0 ) {
-					JumpState = 3;
-				}
-			} else if ( Player.JumpFrame >= 6 && Player.JumpFrame < 18 ) {
-				if ( opt.NowK & PAD_INPUT_M ) {
-					if ( JumpState != 3 )	Player.PJSpeed =  8.0f;
-				} else if ( ( opt.NowK & PAD_INPUT_M ) == 0 ) { 
+			//ã•ûŒü‚ÌƒuƒƒbƒN‚Ì“–‚½‚è”»’è
+			if ( HitBlockUp( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {			
+				//^‚ñ’†‚Éƒqƒbƒg‚·‚éê‡
+				//map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].BU_F=1;
+				Player.PJSpeed = 0.0f;
+				Player.JumpMode = FALSE;
+				Player.JumpFrame = 0;
+			} else if ( HitBlockUp( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_LEFT ) {	
+				//(ƒ}ƒŠƒI‚Ì)¶‘¤‚É“–‚½‚Á‚½
+				int Difference = 0;
+				Difference = map[ ( Player.PlayerY-_MASS_HALF+4 )/32][ ( ( Player.MapScrollX+Player.PlayerX )+_MASS_HALF-4 )/32 ].CoX -
+								( ( Player.PlayerX ) - _MASS_HALF + 4 );
+				Player.PlayerX += Difference;
+			} else if ( HitBlockUp( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_RIGHT ) {	
+				//(ƒ}ƒŠƒI‚Ì)¶‘¤‚É“–‚½‚Á‚½
+				int Difference = 0;
+				Difference = ( ( Player.PlayerX )+_MASS_HALF-4 ) - 
+							map[ ( Player.PlayerY-_MASS_HALF+4 )/32 ][ ( ( Player.MapScrollX+Player.PlayerX )+_MASS_HALF-4 )/32 ].CoX;
+				Player.PlayerX -= Difference;
+			} else if ( HitBlockUp( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {	
+				//ƒqƒbƒg‚µ‚È‚¢ê‡
+				if ( Player.JumpFrame++ < 6 ) {
+					if ( ( opt.NowK & PAD_INPUT_M ) == 0 ) {
+						JumpState = 3;
+					}
+				} else if ( Player.JumpFrame >= 6 && Player.JumpFrame < 18 ) {
+					if ( opt.NowK & PAD_INPUT_M ) {
+						if ( JumpState != 3 )	Player.PJSpeed =  8.0f;
+					} else if ( ( opt.NowK & PAD_INPUT_M ) == 0 ) { 
+						if ( Player.PJSpeed > 0.0f ) {
+							Player.PJSpeed -= 0.4f;
+						} else if ( Player.PJSpeed <= 0.0f ) {
+							Player.PJSpeed = 0.0f;
+							Player.JumpMode = FALSE;
+							Player.JumpFrame = 0;
+						}
+						JumpState = 3;
+					}
+				} else if ( Player.JumpFrame >= 18 ) {
 					if ( Player.PJSpeed > 0.0f ) {
 						Player.PJSpeed -= 0.4f;
 					} else if ( Player.PJSpeed <= 0.0f ) {
@@ -887,47 +910,39 @@ void DrawPlayer() {
 						Player.JumpMode = FALSE;
 						Player.JumpFrame = 0;
 					}
-					JumpState = 3;
-				}
-			} else if ( Player.JumpFrame >= 18 ) {
-				if ( Player.PJSpeed > 0.0f ) {
-					Player.PJSpeed -= 0.4f;
-				} else if ( Player.PJSpeed <= 0.0f ) {
-					Player.PJSpeed = 0.0f;
-					Player.JumpMode = FALSE;
-					Player.JumpFrame = 0;
-				}
-			} 
-			Player.PlayerY -= Player.PJSpeed;
+				} 
+				Player.PlayerY -= Player.PJSpeed;
+			}
+
+		} else if ( JumpState == 2 && Player.JumpMode == FALSE ) {
+			JumpState = 3;
 		}
-
-	} else if ( JumpState == 2 && Player.JumpMode == FALSE ) {
-		JumpState = 3;
 	}
-
-	/*****     —‰ºˆ—     *****/
-	if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && Player.JumpMode == FALSE && HitBlockDown( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
-		JumpState = 4;
-		if ( Player.PYSpeed < 8.0f )	Player.PYSpeed += 0.8f;
-		Player.PlayerY += ( int )Player.PYSpeed;
-		//‚ß‚è‚İ–h~ˆ—
-		if ( HitBlockDown( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
-			int Difference = 0;
-			Difference = ( Player.PlayerY + _MASS_HALF ) - map[ ( Player.PlayerY / 32 ) + 1 ][ ( Player.MapScrollX + Player.PlayerX )/32 ].CoY;
-			Player.PlayerY -= Difference;
+	if ( Player.PlayerAnime == 0 ) {
+		/*****     —‰ºˆ—     *****/
+		if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && Player.JumpMode == FALSE && HitBlockDown( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
+			JumpState = 4;
+			if ( Player.PYSpeed < 8.0f )	Player.PYSpeed += 0.8f;
+			Player.PlayerY += ( int )Player.PYSpeed;
+			//‚ß‚è‚İ–h~ˆ—
+			if ( HitBlockDown( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
+				int Difference = 0;
+				Difference = ( Player.PlayerY + _MASS_HALF ) - map[ ( Player.PlayerY / 32 ) + 1 ][ ( Player.MapScrollX + Player.PlayerX )/32 ].CoY;
+				Player.PlayerY -= Difference;
+				Player.PYSpeed = 0.0f;
+			}
+		} 
+		else if ( Player.JumpMode == FALSE && HitBlockDown( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
+			if ( JumpState == 3 && ( opt.NowK & PAD_INPUT_M ) == 0 ) {
+				JumpState = 0;
+			}
+			if ( JumpState == 4 && ( opt.NowK & PAD_INPUT_M ) == 0 ) {
+				JumpState = 0;
+			}
+		}
+		else {
 			Player.PYSpeed = 0.0f;
 		}
-	} 
-	else if ( Player.JumpMode == FALSE && HitBlockDown( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
-		if ( JumpState == 3 && ( opt.NowK & PAD_INPUT_M ) == 0 ) {
-			JumpState = 0;
-		}
-		if ( JumpState == 4 && ( opt.NowK & PAD_INPUT_M ) == 0 ) {
-			JumpState = 0;
-		}
-	}
-	else {
-		Player.PYSpeed = 0.0f;
 	}
 
 	//ƒS[ƒ‹ƒAƒjƒ[ƒVƒ‡ƒ“
@@ -946,7 +961,7 @@ void DrawPlayer() {
 		}
 	} else if ( Player.GoalFlg == 3 ) {
 		//GAMESTATE = GAME_GOAL;
-		
+	
 		Player.PlayerX+=3;
 		if(FR_Control.FrameCount%3){
 			switch(pg_walk){
@@ -975,17 +990,30 @@ void DrawPlayer() {
 		if(i==8)i=7;
 		else if(i==7)i=8;
 	}
+	if ( Player.GoalFlg == 1 ) {
+	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[i], TRUE, FALSE );			//ƒS[ƒ‹‚µ‚½
+	} else if ( Player.GoalFlg == 2 ) {
+		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[7], TRUE, TRUE );			//ƒS[ƒ‹‚µ‚½(ˆê”Ô‰º‚É~‚è‚½)‚Æ‚«(”½“])
+	}
+	
+	//ƒvƒŒƒCƒ„[‚ª‘å‚«‚­‚È‚éˆ—
+	//else if ( Player.PlayerAnime == 1 ) {
+	//	if ( Player.PAnimeFrame++ > 90 ) {
+	//		Player.PlayerAnime = 0;
+	//	}
+	//}
 
 	//ƒvƒŒƒCƒ„[•`‰æ
+	//if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 1 || PDrawMode == 2 ) && Player.JumpMode == 0 && SlideMode == 0 )
+	//	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, Player.P_lr_f );	//•’Ê•às‚Å‚Ì•`‰æ
+	//if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 1 || PDrawMode == 2 ) && Player.JumpMode == 0 && SlideMode == 1 )
+	//	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[6], TRUE, FALSE );	//•’Ê•às‚Å‚Ì•`‰æ
+	//if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 1 || PDrawMode == 2 ) && Player.JumpMode == 0 && SlideMode == 2 )
+		//DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[6], TRUE, TRUE );	//•’Ê•às‚Å‚Ì•`‰æ
 	if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpMode == 0 )	
 		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[0], TRUE , Player.P_lr_f );	//ƒWƒƒƒ“ƒv‚µ‚Ä‚È‚¢‚Æ‚«
 	if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpMode != 0 )	
 		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[4], TRUE , Player.P_lr_f );	//ƒWƒƒƒ“ƒv‚µ‚½
-	if ( Player.GoalFlg == 1 ) {
-		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[i], TRUE, FALSE );			//ƒS[ƒ‹‚µ‚½
-	} else if ( Player.GoalFlg == 2 ) {
-		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[7], TRUE, TRUE );			//ƒS[ƒ‹‚µ‚½(ˆê”Ô‰º‚É~‚è‚½)‚Æ‚«(”½“])
-	}
 #ifdef _DEBUGMODE
 	SetFontSize( 12 );
 	DrawFormatString( 420,  50, 0xff0000, "OldK = %d", opt.OldK );				//OldK•`‰æ
@@ -996,7 +1024,7 @@ void DrawPlayer() {
 	DrawFormatString( 420, 150, 0xff0000, "PlrY = %d", Player.PlayerY );		//PlayerY•`‰æ
 	DrawFormatString( 420, 170, 0xff0000, "Scrl = %d", Player.MapScrollX );		//Scroll•`‰æ
 	DrawFormatString( 420, 190, 0xff0000, "Pspd = %.2f", Player.PSpeed );		//PSpeed•`‰æ
-	DrawFormatString( 420, 210, 0xff0000, "ItmX = %d", map[ 8 ][ 23 ].ItemX );				//InMode•`‰æ
+	DrawFormatString( 420, 210, 0xff0000, "Pint = %d", Player.Point );			//InMode•`‰æ
 	DrawFormatString( 420, 230, 0xff0000, "Coin = %d", Player.CoinNum );		//ƒRƒCƒ“–‡”•`‰æ
 	DrawFormatString( 420, 250, 0xff0000, "PlrS = %d", Player.PlayerState );	//InMode2•`‰æ
 	DrawFormatString( 420, 270, 0xff0000, "JmpM = %d", ( ( Player.PlayerX ) - _MASS_HALF + 4 ) );			//JumpMode•`‰æ
@@ -1113,27 +1141,33 @@ int HitBlockLeft() {
 //ƒuƒƒbƒNã“–‚½‚è”»’è
 int HitBlockUp( int oX, int oY, int pX, int pY, int jMode, int who ){
 	for ( int i = 0; i < _HITBLOCK; i++ ) {
-		if ( map[ ( ( oY-pY )/32 ) ][ ( ( oX )/32 ) ].MapNum == HitBlockNum[ i ] ) {
-			if ( map[ ( ( oY-pY )/32 ) ][ ( ( oX )/32 ) ].ItemFlg == _ITEM_BRING ) {
-				map[ ( ( oY-pY )/32 ) ][ ( ( oX )/32 ) ].ItemFlg = _ITEM_ANIME;
-			}
-			if ( who == _HITW_PLAYER ) {
-				if ( map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 2 ||
-					 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 3 ||
-					 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 4 ||
-					 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 5 ||
-					 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 6 ||
-					 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 7 ) {
-						map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].BU_F=1;
+		if ( who == _HITW_PLAYER ) {
+			if ( map[ ( ( oY-pY )/32 ) ][ ( ( oX )/32 ) ].MapNum == HitBlockNum[ i ] ) {
+				if ( map[ ( ( oY-pY )/32 ) ][ ( ( oX )/32 ) ].ItemFlg == _ITEM_BRING ) {
+					map[ ( ( oY-pY )/32 ) ][ ( ( oX )/32 ) ].ItemFlg = _ITEM_ANIME;
 				}
+				if ( who == _HITW_PLAYER ) {
+					if ( map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 2 ||
+						 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 3 ||
+						 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 4 ||
+						 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 5 ||
+						 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 6 ||
+						 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 7 ) {
+							map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].BU_F=1;
+					}
+				}
+				return _HIT_TRUE;
+			} 
+			else if ( map[ ( ( oY-pY+4 )/32 ) ][ ( ( oX-pX+6 )/32 ) ].MapNum == HitBlockNum[ i ] ) {
+				return _HIT_LEFT;
 			}
-			return _HIT_TRUE;
-		} 
-		else if ( map[ ( ( oY-pY+4 )/32 ) ][ ( ( oX-pX+6 )/32 ) ].MapNum == HitBlockNum[ i ] ) {
-			return _HIT_LEFT;
+			else if ( map[ ( ( oY-pY+4 )/32 ) ][ ( ( oX+pX-6 )/32 ) ].MapNum == HitBlockNum[ i ] ) {
+				return _HIT_RIGHT;
+			}
 		}
-		else if ( map[ ( ( oY-pY+4 )/32 ) ][ ( ( oX+pX-6 )/32 ) ].MapNum == HitBlockNum[ i ] ) {
-			return _HIT_RIGHT;
+
+		if ( who == _HITW_PWRUP ) {
+
 		}
 	}
 	
@@ -1150,6 +1184,12 @@ int HitBlockDown( int oX, int oY, int pX, int pY, int jMode, int who ) {
 			}
 		}
 		else if ( who == _HITW_PWRUP ) {
+			if ( map[ ( ( oY+pY )/32 ) ][ ( ( oX-pX+6 )/32 ) ].MapNum == HitBlockNum[ i ]
+			|| map[ ( ( oY+pY )/32 ) ][ ( ( oX+pX-6 )/32 ) ].MapNum == HitBlockNum[ i ] ) {
+				return _HIT_TRUE;
+			}
+		}
+		else if ( who == _HITW_FLAG ) {
 			if ( map[ ( ( oY+pY )/32 ) ][ ( ( oX-pX+6 )/32 ) ].MapNum == HitBlockNum[ i ]
 			|| map[ ( ( oY+pY )/32 ) ][ ( ( oX+pX-6 )/32 ) ].MapNum == HitBlockNum[ i ] ) {
 				return _HIT_TRUE;
@@ -1195,4 +1235,34 @@ int HitBlockLeft( int oX, int oY, int pX, int pY, int jMode, int who ) {
 	}
 	
 	return _HIT_FALSE;
+}
+
+//ƒIƒuƒWƒFƒNƒg‚Ì“–‚½‚è”»’è
+int HitObj( int oX, int oY, int pX, int pY, int heightRad, int widthRad ) {
+
+	//if ( ( ( oX - widthRad ) + ( widthRad * 2 ) < ( pX - widthRad ) ) &&
+	//	   ( ( pX - widthRad ) + ( widthRad * 2 ) < ( oX - widthRad ) ) &&
+	//	   ( ( oY - heightRad ) + ( heightRad * 2 ) < ( pY - heightRad ) ) &&
+	//	   ( ( pY - heightRad ) + ( heightRad * 2 ) < ( oY - heightRad ) ) ) {
+	//		return _HIT_FALSE;
+	//}
+	//if ( ( ( pX - widthRad ) > ( oX - widthRad ) + ( widthRad * 2 ) ) &&
+	//	 ( ( oX - widthRad ) > ( pX - widthRad ) + ( widthRad * 2 ) ) &&
+	//	 ( ( pY - heightRad ) > ( oY - heightRad ) + ( heightRad * 2 ) ) &&
+	//	 ( ( oY - heightRad ) > ( pY - heightRad ) + ( heightRad * 2 ) ) ) {
+	//		 return _HIT_FALSE;
+	//}
+	//if ( ( oY - _MASS_HALF ) > ( pY + _MASS_HALF ) && ( oY + _MASS_HALF ) < ( pY - _MASS_HALF ) &&
+	//	 ( oX - _MASS_HALF ) > ( pX + _MASS_HALF ) && ( oX + _MASS_HALF ) < ( pX - _MASS_HALF ) ) {
+	//		 return _HIT_FALSE;
+	//}
+
+	if ( ( oX + _MASS_HALF ) > ( pX - _MASS_HALF ) && ( oX - _MASS_HALF ) < ( pX + _MASS_HALF ) ) {
+		if ( ( oY + _MASS_HALF ) > ( pY - _MASS_HALF ) && ( oY - _MASS_HALF ) < ( pY + _MASS_HALF ) ) {
+			return _HIT_TRUE;
+		}
+	}
+
+	return _HIT_FALSE;
+
 }
