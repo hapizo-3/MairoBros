@@ -476,9 +476,11 @@ void DrawStage() {
 
 	for ( int StageY = 0; StageY < _MAP_ALLSIZE_Y; StageY++ ) {
 		for ( int StageX = 0; StageX < _MAP_ALLSIZE_X; StageX++ ) {
-			map[ StageY ][ StageX ].CoX -= Player.MapSSpeed;
-			if ( map[ StageY ][ StageX ].ItemFlg == _ITEM_BRING || map[ StageY ][ StageX ].ItemFlg == _ITEM_ANIME ) {
-				map[ StageY ][ StageX ].ItemX -= Player.MapSSpeed;
+			if ( Player.PlayerAnime == 0 ) {
+				map[ StageY ][ StageX ].CoX -= Player.MapSSpeed;
+				if ( map[ StageY ][ StageX ].ItemFlg == _ITEM_BRING || map[ StageY ][ StageX ].ItemFlg == _ITEM_ANIME ) {
+					map[ StageY ][ StageX ].ItemX -= Player.MapSSpeed;
+				}
 			}
 		}
 	}
@@ -1282,14 +1284,19 @@ void DrawPlayer() {
 		}
 	}
 
-	static int i=7; 
-	if(Player.GoalFlg==1 && 0==FR_Control.FrameCount%5){
-		if(i==8)i=7;
-		else if(i==7)i=8;
-	}
+	//static int i=7;
+	//if(Player.GoalFlg==1 && 0==FR_Control.FrameCount%5){
+	//	if(i==8)i=7;
+	//	else if(i==7)i=8;
+	//}
 
 	//ゴール画像描画
 	if ( Player.PlayerState == 1 ) {			//ノーマルマリオ
+		static int i=7;
+		if(Player.GoalFlg==1 && 0==FR_Control.FrameCount%5){
+			if(i==8)i=7;
+			else if(i==7)i=8;
+		}
 		if ( Player.GoalFlg == 1 ) {
 			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[i], TRUE, FALSE );			//ゴールした時
 		} else if ( Player.GoalFlg == 2 ) {
@@ -1297,6 +1304,11 @@ void DrawPlayer() {
 		}
 	}
 	else if ( Player.PlayerState == 2 ) {		//スーパーマリオ
+		static int i=8;
+		if(Player.GoalFlg==1 && 0==FR_Control.FrameCount%5){
+			if(i==9)i=8;
+			else if(i==8)i=9;
+		}
 		if ( Player.GoalFlg == 1 ) {
 			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Suplayer[i], TRUE, FALSE );			//ゴールした時
 		} else if ( Player.GoalFlg == 2 ) {
@@ -1304,6 +1316,11 @@ void DrawPlayer() {
 		}
 	}
 	else if ( Player.PlayerState == 3 ) {		//ファイヤーマリオ
+		static int i=8;
+		if(Player.GoalFlg==1 && 0==FR_Control.FrameCount%5){
+			if(i==9)i=8;
+			else if(i==8)i=9;
+		}
 		if ( Player.GoalFlg == 1 ) {
 			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.FirePlayer[i], TRUE, FALSE );			//ゴールした時
 		} else if ( Player.GoalFlg == 2 ) {
@@ -1476,13 +1493,26 @@ int HitBlockUp( int oX, int oY, int pX, int pY, int jMode, int who ){
 					map[ ( ( oY-pY )/32 ) ][ ( ( oX )/32 ) ].ItemFlg = _ITEM_ANIME;
 				}
 				if ( who == _HITW_PLAYER ) {
-					if ( map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 2 ||
-						 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 3 ||
-						 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 4 ||
-						 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 5 ||
-						 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 6 ||
-						 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 7 ) {
-							map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].BU_F=1;
+					if ( Player.PlayerState == 1 ) {
+						if ( map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 2 ||
+							 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 3 ||
+							 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 4 ||
+							 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 5 ||
+							 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 6 ||
+							 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 7 ) {
+								map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].BU_F=1;
+						}
+					}
+
+					if ( Player.PlayerState == 2 || Player.PlayerState == 3 )  {
+						if ( map[ ( ( Player.PlayerY-_MASS_Y ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 2 ||
+							 map[ ( ( Player.PlayerY-_MASS_Y ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 3 ||
+							 map[ ( ( Player.PlayerY-_MASS_Y ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 4 ||
+							 map[ ( ( Player.PlayerY-_MASS_Y ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 5 ||
+							 map[ ( ( Player.PlayerY-_MASS_Y ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 6 ||
+							 map[ ( ( Player.PlayerY-_MASS_Y ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 7 ) {
+								map[ ( ( Player.PlayerY-_MASS_Y ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].BU_F=1;
+						}
 					}
 				}
 				return _HIT_TRUE;
@@ -1496,7 +1526,6 @@ int HitBlockUp( int oX, int oY, int pX, int pY, int jMode, int who ){
 		}
 
 		if ( who == _HITW_PWRUP ) {
-
 		}
 	}
 	
@@ -1532,16 +1561,36 @@ int HitBlockDown( int oX, int oY, int pX, int pY, int jMode, int who ) {
 int HitBlockRight( int oX, int oY, int pX, int pY, int jMode, int who ) {
 	for ( int i = 0; i < _HITBLOCK; i++ ) {
 		if ( who == _HITW_PLAYER ) {
-			if ( map[ ( ( oY-pY+4 )/32 ) ][ ( ( oX+pX )/32 ) ].MapNum == HitBlockNum[ i ] 
-			|| map[ ( ( oY+pY-4 )/32 ) ][ ( ( oX+pX )/32 ) ].MapNum == HitBlockNum[ i ] ) {
-				return _HIT_TRUE;
-			} 
-			else if ( map[ ( ( oY-pY+4 )/32 ) ][ ( ( oX )/32 ) ].MapNum == 34
-			|| map[ ( ( oY+pY-4 )/32 ) ][ ( ( oX )/32 ) ].MapNum == 35 ) {
-				return _HIT_GOAL;
+			if ( Player.PlayerState == 1 ) {
+				if ( map[ ( ( oY-pY+4 )/32 ) ][ ( ( oX+pX )/32 ) ].MapNum == HitBlockNum[ i ] 
+				|| map[ ( ( oY+pY-4 )/32 ) ][ ( ( oX+pX )/32 ) ].MapNum == HitBlockNum[ i ] ) {
+					return _HIT_TRUE;
+				} 
+				else if ( map[ ( ( oY-pY+4 )/32 ) ][ ( ( oX )/32 ) ].MapNum == 34
+				|| map[ ( ( oY+pY-4 )/32 ) ][ ( ( oX )/32 ) ].MapNum == 35 ) {
+					return _HIT_GOAL;
+				}
+				else if ( map[ ( ( oY-pY+4 )/32 ) ][ ( ( oX )/32 ) ].MapNum == 70) {
+					return _HIT_CASTLE;
+				}
 			}
-			else if ( map[ ( ( oY-pY+4 )/32 ) ][ ( ( oX )/32 ) ].MapNum == 70) {
-				return _HIT_CASTLE;
+			else if ( Player.PlayerState == 2 || Player.PlayerState == 3 ) {
+				if ( map[ ( ( oY-pY+4 )/32 ) ][ ( ( oX+pX )/32 ) ].MapNum == HitBlockNum[ i ] 
+				  || map[ ( ( oY+pY-4 )/32 ) ][ ( ( oX+pX )/32 ) ].MapNum == HitBlockNum[ i ]
+				  || map[ ( ( oY ) /32 ) ][ ( ( oX+pX )/32 ) ].MapNum == HitBlockNum[ i ] ) {
+					return _HIT_TRUE;
+				} 
+				else if ( map[ ( ( oY-pY+4 )/32 ) ][ ( ( oX )/32 ) ].MapNum == 34
+					   || map[ ( ( oY+pY-4 )/32 ) ][ ( ( oX )/32 ) ].MapNum == 35
+					   || map[ ( ( oY ) /32 ) ][ ( ( oX )/32 ) ].MapNum == 34
+					   || map[ ( ( oY ) /32 ) ][ ( ( oX )/32 ) ].MapNum == 35 ) {
+					return _HIT_GOAL;
+				}
+				else if ( map[ ( ( oY-pY+4 )/32 ) ][ ( ( oX )/32 ) ].MapNum == 70
+					   || map[ ( ( oY+pY-4 )/32 ) ][ ( ( oX )/32 ) ].MapNum == 70
+					   || map[ ( ( oY ) /32 ) ][ ( ( oX )/32 ) ].MapNum == 70 ) {
+					return _HIT_CASTLE;
+				}
 			}
 		} else if ( who == _HITW_PWRUP ) {
 			if ( map[ ( ( oY-pY+4 )/32 ) ][ ( ( oX+pX )/32 ) ].MapNum == HitBlockNum[ i ] 
@@ -1557,9 +1606,26 @@ int HitBlockRight( int oX, int oY, int pX, int pY, int jMode, int who ) {
 //ブロック左当たり判定
 int HitBlockLeft( int oX, int oY, int pX, int pY, int jMode, int who ) {
 	for ( int i = 0; i < _HITBLOCK; i++ ) {
-		if ( map[ ( ( oY-pY+4 )/32 ) ][ ( ( oX-pX )/32 ) ].MapNum == HitBlockNum[ i ]
-			|| map[ ( ( oY+pY-4 )/32 ) ][ ( ( oX-pX )/32 ) ].MapNum == HitBlockNum[ i ] ) {
-			return _HIT_TRUE;
+		if ( who == _HITW_PLAYER ) {
+			if ( Player.PlayerState == 1 ) {
+				if ( map[ ( ( oY-pY+4 )/32 ) ][ ( ( oX-pX )/32 ) ].MapNum == HitBlockNum[ i ]
+					|| map[ ( ( oY+pY-4 )/32 ) ][ ( ( oX-pX )/32 ) ].MapNum == HitBlockNum[ i ] ) {
+					return _HIT_TRUE;
+				}
+			}
+			else if ( Player.PlayerState == 2 || Player.PlayerState == 3 ) {
+				if ( map[ ( ( oY-pY+4 )/32 ) ][ ( ( oX-pX )/32 ) ].MapNum == HitBlockNum[ i ]
+					|| map[ ( ( oY+pY-4 )/32 ) ][ ( ( oX-pX )/32 ) ].MapNum == HitBlockNum[ i ]
+					|| map[ ( ( oY )/32 ) ][ ( ( oX-pX )/32 ) ].MapNum == HitBlockNum[ i ] ) {
+					return _HIT_TRUE;
+				}
+			}
+		}
+		if ( who == _HITW_PWRUP ) {
+			if ( map[ ( ( oY-pY+4 )/32 ) ][ ( ( oX-pX )/32 ) ].MapNum == HitBlockNum[ i ]
+				|| map[ ( ( oY+pY-4 )/32 ) ][ ( ( oX-pX )/32 ) ].MapNum == HitBlockNum[ i ] ) {
+				return _HIT_TRUE;
+			}
 		}
 	}
 	
