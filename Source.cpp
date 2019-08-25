@@ -22,6 +22,7 @@
 #define _MASS_X		32
 #define _MASS_Y		32
 #define _MASS_HALF	16
+#define _MASS_ENEMY	24
 
 /*****		É}ÉbÉvÇÃçÇÇ≥		*****/
 #define _MAP_X		16
@@ -45,6 +46,7 @@
 #define _HIT_ITEM	6
 #define _HIT_GOAL	7
 #define _HIT_CASTLE	8
+#define _HIT_DEATH	9
 
 #define _HITW_PLAYER	0	//ÉqÉbÉgîªíË-ÉvÉåÉCÉÑÅ[
 #define _HITW_PWRUP		1	//ÉqÉbÉgîªíË-ÉpÉèÅ[ÉAÉbÉvÉLÉmÉR
@@ -71,6 +73,8 @@
 #define _ITEMT_MCOIN	6	//âΩâÒÇ©âüÇπÇÈÉRÉCÉì
 #define _ITEMT_PWRUP	7	//ÉpÉèÅ[ÉAÉbÉvÉAÉCÉeÉÄ
 
+#define _ENEMY_NUM		6
+
 //ÉQÅ[ÉÄèÛë‘ïœêî
 static int GAMESTATE;
 
@@ -78,12 +82,18 @@ static int GAMESTATE;
 static int RefreshRate;
 HDC hdc;
 
+//ÉEÉBÉìÉhÉEÉTÉCÉY
+const int _WINDOWSIZE_X = 768;
+const int _WINDOWSIZE_Y = 672;
+
 /*****      ÉQÅ[ÉÄÉÇÅ[ÉhóÒãìëÃ      *****/
 typedef enum GAME_MODE {
 	GAME_TITLE,			//É^ÉCÉgÉã
 	GAME_INIT,			//èâä˙âª
 	GAME_MAIN,			//ÉÅÉCÉì
+	GAME_INITB,			//écã@Ç∆Ç©ï\é¶ÇÃâÊñ 
 	GAME_GOAL,			//ÉSÅ[ÉãâÊñ (äJî≠èÛë‘)
+	GAME_OVER,			//ÉQÅ[ÉÄÉIÅ[ÉoÅ[ï`âÊ
 	GAME_END,			//ÉGÉìÉhèàóù
 	END = 99			//ÉGÉìÉh
 };
@@ -101,12 +111,22 @@ typedef struct PICTURE {
 	int P_Walk[ 4 ];		//ï‡çsèàóù(ÉmÅ[É}Éã)
 	int P_WalkS[ 4 ];		//ï‡çsèàóù(ÉXÅ[ÉpÅ[)
 	int P_WalkF[ 4 ];		//ï‡çsèàóù(ÉtÉ@ÉCÉÑÅ[)
+	int EnemyMob[ 20 ];		//ìGâÊëú
+	int TitleImg;
 };
 PICTURE Pic;	//âÊëúç\ë¢ëÃêÈåæ
 
 /*****      ÉTÉEÉìÉhç\ë¢ëÃ      *****/
 typedef struct SOUND {
-	int Sound;
+	int coin;
+	int kinoko;
+	int pole;
+	int goal;
+	int powerUp;
+	int bgm_ground;
+	int bgm_death;
+	int BounceBlock;
+	int BreakBlock;
 };
 SOUND Sound;		//âπäyç\ë¢ëÃêÈåæ
 
@@ -185,28 +205,43 @@ typedef struct PLAYER {
 	int PlayerState;	//ÉvÉåÉCÉÑÅ[ÇÃèÛë‘( 1=Mario, 2=SuperMario, 3=FireMario )
 	int PlayerAnime;	//ÉAÉjÉÅÅ[ÉVÉáÉìèÛë‘(ëSëÃÇ™àÍìxé~Ç‹ÇÈèàóù)
 	int PAnimeFrame;	//ÉvÉåÉCÉÑÅ[ÉAÉjÉÅÅ[ÉVÉáÉìÉtÉåÅ[ÉÄ
+	int dgnFlg;			//ÉvÉåÉCÉÑÅ[Ç™ëﬁâªÇµÇΩéûÇ…àÍéûìIÇ…ñ≥ìGÇ…Ç»ÇÈèàóù
 	int GoalFlg;		//ÉSÅ[ÉãÉtÉâÉO
 	int DeathFlg;		//éÄñSÉtÉâÉO
+	int Life;			//écã@
 	int CoinNum;		//ÉRÉCÉìÇÃñáêî
 	int Point;			//É|ÉCÉìÉg
+	int DownFlg;		//óéÇøÇÈÉtÉâÉO
 };
 //first 3,11
-PLAYER Player = { ( ( 3 * _MASS_X ) + _MASS_HALF ), ( 11 * _MASS_Y + _MASS_HALF ), 0, 0 };
+PLAYER Player /*= { ( ( 3 * _MASS_X ) + _MASS_HALF ), ( 11 * _MASS_Y + _MASS_HALF ), 0, 0 }*/;
+
+typedef struct ENEMY {
+	int EnemyType;	//ìGÇÃéÌóﬁ( 1=ÉNÉäÉ{Å[, 2=ÇÃÇ±ÇÃÇ± )
+	int MoveFlg;	//ìGÇ™ìÆÇØÇÈîÕàÕÇ…óàÇΩéûÇ…óßÇ¬
+	int EnemyX;		//ìGXç¿ïW
+	int EnemyY;		//ìGYç¿ïW
+	int EDirect;	//ìGï˚å¸
+	int PressFlg;	//ì•Ç›Ç¬ÇØÇÁÇÍÇΩÉtÉâÉO
+	float ESpeed;	//ìGXÉXÉsÅ[Éh
+	float EYSpeed;	//ìGYÉXÉsÅ[Éh
+};
+ENEMY Enemy[ _ENEMY_NUM ];
 
 int Map[ _MAP_ALLSIZE_Y ][ _MAP_ALLSIZE_X ] = 
 	{	
 		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
 		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 19, 20, 21,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 19, 20, 20, 21,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 19, 20, 21,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 19, 20, 20, 21,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 19, 20, 21,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 19, 20, 20, 21,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 19, 20, 21,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 19, 20, 20, 21,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 34,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
 		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 33,  0,  0,  0,  0,  0, 19, 20, 20, 20, 21,  0,  0,  0,  0, 31, 32, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 19, 20, 21,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 33,  0,  0,  0,  0,  0, 19, 20, 20, 20, 21,  0,  0,  0,  0,  0, 31, 32, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 19, 20, 21,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 33,  0,  0,  0,  0,  0, 19, 20, 20, 20, 21,  0,  0,  0,  0,  0, 31, 32, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 19, 20, 21,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 33,  0,  0,  0,  0,  0, 19, 20, 20, 20, 21,  0,  0,  0,  0, 31, 32, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 35,  0,  0, 19, 20, 21,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
-		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 32, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 32, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 32, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 32, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 35,  0,  0, 31, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
-		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  6,  6,  6,  0,  0,  0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  6,  6,  6,  6,  6,  6,  6,  0,  0,  0,  6,  6,  6,  2,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  6,  6,  0,  0,  0,  0,  0,  6,  2,  2,  6,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  0,  0,  0,  0,  0,  0,  0,  0, 35,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
+		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 32, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 32, 32, 33,  0,  0, 72, 72,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 32, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 31, 32, 32, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 35,  0,  0, 31, 32, 33,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
+		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  6,  6,  6,  6,  6,  6,  6,  0,  0,  0,  6,  6,  6,  2,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  6,  6,  0,  0,  0,  0,  0,  6,  2,  2,  6,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  0,  0,  0,  0,  0,  0,  0,  0, 35,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
 		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  9,  0,  0,  0,  0,  0,  0,  0,  0, 35,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
 		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  9,  9,  0,  0,  0,  0,  0,  0,  0,  0, 35,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
-		{  0,  0,  0,  0,  0,  0,  6,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  9,  9,  9,  0,  0,  0,  0,  0,  0,  0,  0, 35,  0,  0,  0,  0, 43, 43, 43,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
-		{  0,  0,  0,  0,  2,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  6,  2,  6,  2,  6,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 65, 66,  0,  0,  0,  0,  0,  0,  0,  0,  0, 65, 66,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  2,  6,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  0,  0,  0,  0,  0,  6,  6,  0,  0,  0,  0,  2,  0,  0,  2,  0,  0,  2,  0,  0,  0,  0,  0,  6,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  6,  0,  0,  0,  0,  0,  0,  9,  0,  0,  9,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  0,  0,  9,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  6,  2,  6,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  9,  9,  9,  9,  0,  0,  0,  0,  0,  0,  0,  0, 35,  0,  0,  0,  0, 45, 46, 47,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
+		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  9,  9,  9,  0,  0,  0,  0,  0,  0,  0,  0, 35,  0,  0,  0,  0, 43, 43, 43,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
+		{  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  6,  2,  6,  2,  6,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 65, 66,  0,  0,  0,  0,  0,  0,  0,  0,  0, 65, 66,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  2,  6,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  0,  0,  0,  0,  0,  6,  6,  0,  0,  0,  0,  2,  0,  0,  2,  0,  0,  2,  0,  0,  0,  0,  0,  6,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  6,  0,  0,  0,  0,  0,  0,  9,  0,  0,  9,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  0,  0,  9,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  6,  2,  6,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  9,  9,  9,  9,  0,  0,  0,  0,  0,  0,  0,  0, 35,  0,  0,  0,  0, 45, 46, 47,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
 		{  0,  0, 18,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 65, 66,  0,  0,  0,  0,  0,  0, 77, 78,  0,  0, 18,  0,  0,  0,  0,  0,  0, 77, 78,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 18,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  0,  0,  9,  9,  0,  0,  0,  0, 18,  0,  0,  0,  9,  9,  9,  0,  0,  9,  9,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  9,  9,  9,  9,  9,  0,  0,  0,  0, 18,  0,  0,  0, 35,  0,  0,  0, 43, 44, 46, 44, 43,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
-		{  0, 15, 16, 17,  0,  0,  0,  0, 65, 66,  0,  0,  0,  0,  0,  0,  0, 18,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 65, 66,  0,  0,  0,  0,  0,  0,  0,  0, 77, 78,  0,  0,  0,  0,  0,  0, 77, 78,  0, 15, 16, 17,  0,  0,  0,  0,  0, 77, 78,  0,  0,  0,  0,  0,  0, 18,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 15, 16, 17,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 18,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  9,  0,  0,  9,  9,  9,  0,  0, 15, 16, 17,  0,  9,  9,  9,  9,  0,  0,  9,  9,  9,  0,  0,  0, 18,  0, 65, 66,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 65, 66,  0,  9,  9,  9,  9,  9,  9,  9,  9,  0,  0,  0, 15, 16, 17,  0,  0, 35,  0,  0,  0, 46, 46, 48, 46, 46,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
-		{ 15, 16, 69, 16, 17,  0,  0,  0, 77, 78,  0, 22, 23, 23, 23, 24, 15, 16, 17,  0,  0,  0,  0, 22, 23, 24,  0,  0, 77, 78,  0,  0,  0,  0,  0,  0,  0,  0, 77, 78,  0, 22, 23, 23, 24,  0, 77, 78, 15, 16, 69, 16, 17,  0,  0,  0,  0, 77, 78, 22, 23, 23, 23, 24, 15, 16, 17,  0,  0,  0,  0,  0, 22, 23, 24,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 22, 23, 23, 24,  0,  0,  0, 15, 16, 69, 16, 17,  0,  0,  0,  0,  0,  0, 22, 23, 23, 23, 24, 15, 16, 17,  0,  0,  0,  0, 22, 23, 24,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  9,  9, 23, 23,  9,  9,  9,  9, 15, 16, 69, 16,  9,  9,  9,  9,  9,  0,  0,  9,  9,  9,  9, 24, 15, 16, 17, 77, 78,  0,  0, 22, 23, 24,  0,  0,  0,  0,  0,  0,  0,  0,  0, 77, 78,  9,  9,  9,  9,  9,  9,  9,  9,  9,  0,  0, 15, 16, 69, 16, 17,  0,  9,  0,  0,  0, 46, 46, 70, 46, 46,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
+		{  0, 15, 16, 17,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 18,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 65, 66,  0,  0,  0,  0,  0,  0,  0,  0, 77, 78,  0,  0,  0,  0,  0,  0, 77, 78,  0, 15, 16, 17,  0,  0,  0,  0,  0, 77, 78,  0,  0,  0,  0,  0,  0, 18,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 15, 16, 17,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 18,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  9,  0,  0,  9,  9,  9,  0,  0, 15, 16, 17,  0,  9,  9,  9,  9,  0,  0,  9,  9,  9,  0,  0,  0, 18,  0, 65, 66,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 65, 66,  0,  9,  9,  9,  9,  9,  9,  9,  9,  0,  0,  0, 15, 16, 17,  0,  0, 35,  0,  0,  0, 46, 46, 48, 46, 46,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
+		{ 15, 16, 69, 16, 17,  0,  0,  0,  0,  0,  0, 22, 23, 23, 23, 24, 15, 16, 17,  0,  0, 81, 72, 22, 23, 24,  0,  0, 77, 78,  0,  0,  0,  0,  0,  0,  0,  0, 77, 78,  0, 22, 23, 23, 24,  0, 77, 78, 15, 16, 69, 16, 17,  0, 72, 72,  0, 77, 78, 22, 23, 23, 23, 24, 15, 16, 17,  0,  0,  0,  0,  0, 22, 23, 24,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 22, 23, 23, 24,  0,  0,  0, 15, 16, 69, 16, 17,  0,  0,  0,  0,  0,  0, 22, 23, 23, 23, 24, 15, 16, 17,  0,  0,  0,  0, 22, 23, 24,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  9,  9,  9,  9, 23, 23,  9,  9,  9,  9, 15, 16, 69, 16,  9,  9,  9,  9,  9,  0,  0,  9,  9,  9,  9, 24, 15, 16, 17, 77, 78,  0,  0, 22, 23, 24,  0,  0,  0,  0,  0,  0,  0,  0,  0, 77, 78,  9,  9,  9,  9,  9,  9,  9,  9,  9,  0,  0, 15, 16, 69, 16, 17,  0,  9,  0,  0,  0, 46, 46, 70, 46, 46,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0},
 		{  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0,  0,  0,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0,  0,  0,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0,  0,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8},
 		{  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0,  0,  0,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0,  0,  0,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  0,  0,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8,  8}
 	};
@@ -228,8 +263,11 @@ static void FR_Wait( );		//ë“ã@èàóùä÷êî
 
 //ÉQÅ[ÉÄÉÅÉCÉìèàóùånä÷êî
 void GameInit();	//èâä˙èàóù
+void GameInitB();	//écã@ï\é¶
 void GameMain();	//ÉÅÉCÉìèàóù
 void MapInit();		//É}ÉbÉvèâä˙èàóù
+void PlayerInit();	//ÉvÉåÉCÉÑÅ[èâä˙èàóù
+void EnemyInit();	//ìGèâä˙èàóù
 
 //ÉQÅ[ÉÄÉXÉeÅ[Égï`âÊä÷êî
 void DrawTitle();	//É^ÉCÉgÉãï`âÊ
@@ -241,6 +279,7 @@ void DrawStage();	//ÉXÉeÅ[ÉWï`âÊ
 void DrawPlayer();	//ÉvÉåÉCÉÑÅ[ï`âÊ
 void DrawBlock();	//ÉuÉçÉbÉNï`âÊ
 void DrawFlag();	//ÉSÅ[Éãä¯ï`âÊ
+void DrawEnemy();	//ìGï`âÊ
 int DrawItem( int iX, int iY /*, int iType, int iFrame*/ );	//ÉAÉCÉeÉÄï`âÊ
 
 //É}ÉäÉIèàóùånä÷êî
@@ -255,17 +294,18 @@ int HitBlockDown( int oX, int oY, int pX, int pY, int jMode, int who );		//ÉuÉçÉ
 int HitBlockRight( int oX, int oY, int pX, int pY, int jMode, int who );		//ÉuÉçÉbÉNâEìñÇΩÇËîªíË
 int HitBlockLeft( int oX, int oY, int pX, int pY,int jMode, int who );		//ÉuÉçÉbÉNç∂ìñÇΩÇËîªíË
 
-int HitObjUp( int oX, int oY, int pX, int pY, int heightRad, int widthRad );		//ìG,ÉAÉCÉeÉÄÇÃìñÇΩÇËîªíËè„
-int HitObjDown( int oX, int oY, int pX, int pY, int heightRad, int widthRad );		//ìG,ÉAÉCÉeÉÄÇÃìñÇΩÇËîªíËâ∫
-int HitObjRight( int oX, int oY, int pX, int pY, int heightRad, int widthRad );		//ìG,ÉAÉCÉeÉÄÇÃìñÇΩÇËîªíËâE
-int HitObjLeft( int oX, int oY, int pX, int pY, int heightRad, int widthRad );		//ìG,ÉAÉCÉeÉÄÇÃìñÇΩÇËîªíËç∂
+int HitObjUp( int oX, int oY, int pX, int pY, int oheightRad, int owidthRad, int pheightRad, int pwidthRad );		//ìG,ÉAÉCÉeÉÄÇÃìñÇΩÇËîªíËè„
+int HitObjDown( int oX, int oY, int pX, int pY, int oheightRad, int owidthRad, int pheightRad, int pwidthRad );		//ìG,ÉAÉCÉeÉÄÇÃìñÇΩÇËîªíËâ∫
+int HitObjRight( int oX, int oY, int pX, int pY, int oheightRad, int owidthRad, int pheightRad, int pwidthRad );		//ìG,ÉAÉCÉeÉÄÇÃìñÇΩÇËîªíËâE
+int HitObjLeft( int oX, int oY, int pX, int pY, int oheightRad, int owidthRad, int pheightRad, int pwidthRad );		//ìG,ÉAÉCÉeÉÄÇÃìñÇΩÇËîªíËç∂
 
-int HitObj( int oX, int oY, int pX, int pY, int heightRad, int widthRad );			//ìñÇΩÇËîªíËëSï˚å¸
+int HitObj( int oX, int oY, int pX, int pY, int oheightRad, int owidthRad, int pheightRad, int pwidthRad );			//ìñÇΩÇËîªíËëSï˚å¸
 
 int HitBlockUpBreak();	//ÉuÉçÉbÉNè„ìñÇΩÇËîªíËÅAîjâÛîªíË
 
 //ì«çûèàóùä÷êî
 int LoadImages();	//âÊëúì«çû
+int LoadSounds();	//ÉTÉEÉìÉhì«Ç›çûÇ›
 
 /****************************************************/
 /*****											*****/
@@ -274,9 +314,6 @@ int LoadImages();	//âÊëúì«çû
 /****************************************************/
 
 int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow ) {
-
-	const int _WINDOWSIZE_X = 768;
-	const int _WINDOWSIZE_Y = 672;
 
 	GAMESTATE = GAME_TITLE;
 	SetMainWindowText( "Super Mairo Bros" );					//ÉEÉBÉìÉhÉEÉeÉLÉXÉgïœçX
@@ -294,6 +331,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	/*****************************************************************************/
 
 	if ( LoadImages() == -1 )	return -1;		//âÊëúì«çûèàóù
+	if ( LoadSounds() == -1 )	return -1;		//âπì«çûèàóù
 
 	/*************************     ÉÅÉCÉìÉãÅ[Évèàóù     **************************/
 	while ( ProcessMessage() == 0 && ClearDrawScreen() == 0 && GAMESTATE != 99 ) {
@@ -315,11 +353,16 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 			case GAME_INIT:
 				GameInit();
 				break;
+			case GAME_INITB:
+				GameInitB();
+				break;
 			case GAME_MAIN:
 				GameMain();
 				break;
 			case GAME_GOAL:
 				DrawGoal();
+				break;
+			case GAME_OVER:
 				break;
 			case GAME_END:
 				DrawEnd();
@@ -381,21 +424,40 @@ static void FR_Wait( ) {
 //É^ÉCÉgÉãï`âÊ
 void DrawTitle() {
 //	DrawGraph(100,100,Pic.Player[1],TRUE);
-	int x;
-
-	x = 256 - (GetDrawStringWidth( "MARIO", 5 )/2);
-	DrawString( x, 240, "MARIO", 0xff0000 );
-
-	x = 256 - (GetDrawStringWidth( "Push Space", 10 )/2);
-	DrawString( x, 400, "Push Space", 0xffffff );
+	static int x = 0;
+	if ( x == 0 ) {
+		MapInit();
+		PlayerInit();
+	}
+	//x = 256 - (GetDrawStringWidth( "MARIO", 5 )/2);
+	//DrawString( x, 240, "MARIO", 0xff0000 );
+	//x = 256 - (GetDrawStringWidth( "Push Space", 10 )/2);
+	//DrawString( x, 400, "Push Space", 0xffffff );
 	
-	
+	//ÉèÅ[ÉãÉh
+	//DrawRotaGraph( 18*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 32 ] , TRUE);
+	//DrawRotaGraph( 19*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 24 ] , TRUE);
+	//DrawRotaGraph( 20*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 27 ] , TRUE);
+	//DrawRotaGraph( 21*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 21 ] , TRUE);
+	//DrawRotaGraph( 22*_SIZE_STR , 16 , 1.0f , 0 , Pic.StrImage[ 13 ] , TRUE);
 
+	////ÉXÉeÅ[ÉW
+	//DrawRotaGraph( 19*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 1 ] , TRUE);
+	//DrawRotaGraph( 20*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 36 ] , TRUE);
+	//DrawRotaGraph( 21*_SIZE_STR , 32 , 1.0f , 0 , Pic.StrImage[ 1 ] , TRUE);
+	//É^ÉCÉgÉãâÊñ 
+	DrawStage();
+	DrawPlayer();
+	DrawRotaGraph( 256, 134, 2.1f, 0, Pic.TitleImg , TRUE );
+	
 	if ( opt.Kflg & PAD_INPUT_M ) {
 		GAMESTATE = GAME_INIT;
+		x = 0;
 	} else if ( opt.Kflg & PAD_INPUT_START ) {
 		GAMESTATE = GAME_END;
+		x = 0;
 	}
+	DrawFormatString( 0, 0, 0xffffff, "1" );
 }
 
 void DrawGoal() {
@@ -419,46 +481,70 @@ void DrawEnd() {
 
 //ÉÅÉCÉìèâä˙èàóù
 void GameInit() {
+	//static int inFrame = 0;
 
-	MapInit();
-	Player.PYSpeed = 0.0f;
-	Player.PSpeed = 0.0f;
-	Player.PJSpeed = 0.0f;
-	Player.JumpFrame = 0;
-	Player.JumpMode = FALSE;
-	Player.DeathFlg = 0;
-	Player.GoalFlg = 0;
-	Player.MapScrollX = 0;
-	Player.MapSSpeed = 0;
-	Player.PDirectMode = 0;
-	Player.PJSpeed = 0;
-	Player.PlayerState = _MARIO_NOMAL;
-	Player.PlayerAnime = 0;
-	Player.PlayerState = 1;
+	//if ( inFrame++ < 1 ) {
+	//	MapInit();
+	//	PlayerInit();
+
+	//	Item.HataX = 200 * _MASS_X;
+	//	Item.HataY = 2 * _MASS_Y + 5;
+	//}
+	//else if ( inFrame > 60 ) {
+	//	GAMESTATE = GAME_MAIN;
+	//	inFrame = 0;
+	//}
 
 	Item.HataX = 200 * _MASS_X;
 	Item.HataY = 2 * _MASS_Y + 5;
 
-	GAMESTATE = GAME_MAIN;
+	MapInit();
+	PlayerInit();
 
+	GAMESTATE = GAME_INITB;
+	DrawFormatString( 0, 0, 0xffffff, "2" );
+
+}
+
+void GameInitB(){
+	DrawBox( 0, 0, _WINDOWSIZE_X, _WINDOWSIZE_Y, 0x000000, TRUE );
+	static int inFrame = 0;
+	DrawFormatString( 100, 100, 0xffffff, "%d", Player.Life );
+
+	if ( inFrame++ > 90 ) {
+		GAMESTATE = GAME_MAIN;
+		inFrame = 0;
+		DrawBox( 0, 0, _WINDOWSIZE_X, _WINDOWSIZE_Y, 0x000000, TRUE );
+	}
 }
 
 //ÉQÅ[ÉÄÉÅÉCÉìèàóù
 void GameMain() {
+	if ( CheckSoundMem( Sound.bgm_ground ) == 0 ) {
+		PlaySoundMem( Sound.bgm_ground, DX_PLAYTYPE_BACK );
+	}
+	if ( ( Player.DeathFlg == 1 || Player.GoalFlg != 0 ) && CheckSoundMem( Sound.bgm_ground ) == 1 ) {
+		StopSoundMem( Sound.bgm_ground );
+	}
 
 	DrawStage();		//ÉXÉeÅ[ÉWï`âÊ
 	DrawFlag();			//ÉSÅ[ÉãÉtÉâÉO
 	DrawPlayer();		//ÉvÉåÉCÉÑÅ[ï`âÊ
+	DrawEnemy();		//ìGï`âÊ
 	//DrawKinoko();		//ÉLÉmÉRï`âÊ
 
 	if ( opt.Kflg & PAD_INPUT_START ) {
 		GAMESTATE = GAME_TITLE;
 	}
+	DrawFormatString( 0, 0, 0xffffff, "3" );
 }
 
 //ÉXÉeÅ[ÉWï`âÊ
 void DrawStage() {
 
+	//if ( /*Player.GoalFlg == 0 || */GAMESTATE == GAME_MAIN ) {
+		//PlaySoundMem( Sound.bgm_ground, DX_PLAYTYPE_BACK );
+	//}
 	static int A_frame=0;
 
 	//îwåiï`âÊ
@@ -474,9 +560,14 @@ void DrawStage() {
 	}
 #endif
 
+	for ( int i = 0; i < _ENEMY_NUM; i++ ) {
+		if ( Player.PlayerAnime == 0 && Player.DeathFlg == 0 ) {
+			Enemy[ i ].EnemyX -= Player.MapSSpeed;
+		}
+	}
 	for ( int StageY = 0; StageY < _MAP_ALLSIZE_Y; StageY++ ) {
 		for ( int StageX = 0; StageX < _MAP_ALLSIZE_X; StageX++ ) {
-			if ( Player.PlayerAnime == 0 ) {
+			if ( Player.PlayerAnime == 0 && Player.DeathFlg == 0 ) {
 				map[ StageY ][ StageX ].CoX -= Player.MapSSpeed;
 				if ( map[ StageY ][ StageX ].ItemFlg == _ITEM_BRING || map[ StageY ][ StageX ].ItemFlg == _ITEM_ANIME ) {
 					map[ StageY ][ StageX ].ItemX -= Player.MapSSpeed;
@@ -488,7 +579,7 @@ void DrawStage() {
 	//É}ÉbÉvï`âÊ
 	for ( int StageY = 0; StageY < _MAP_ALLSIZE_Y; StageY++ ) {
 		for ( int StageX = 0; StageX < _MAP_ALLSIZE_X; StageX++ ) {
-			if ( Player.PlayerAnime == 0 ) {
+			if ( Player.PlayerAnime == 0 && Player.DeathFlg == 0 ) {
 				//ÉRÉCÉì&ÉpÉèÅ[ÉAÉbÉvÉAÉCÉeÉÄÇÃÉAÉjÉÅÅ[ÉVÉáÉì
 				if ( map[ StageY ][ StageX ].ItemFlg == _ITEM_ANIME || map[ StageY ][ StageX ].ItemFlg == _ITEM_MOVIN ) {
 					//èâä˙èàóù(ÉnÉeÉiÉuÉçÉbÉNïœçX)
@@ -504,7 +595,7 @@ void DrawStage() {
 				}
 
 				//ÉnÉeÉiÉuÉçÉbÉNÇÃêFÇÃëJà⁄
-				if(map[StageY][StageX].MapNum==2||map[StageY][StageX].MapNum==3||map[StageY][StageX].MapNum==4||map[StageY][StageX].MapNum==5){
+				if( map[StageY][StageX].MapNum==2||map[StageY][StageX].MapNum==3||map[StageY][StageX].MapNum==4||map[StageY][StageX].MapNum==5){
 					if(A_frame++<250)map[StageY][StageX].MapNum=2;
 					else if(A_frame<350)map[StageY][StageX].MapNum=4;
 					else if(A_frame<450)map[StageY][StageX].MapNum=5;
@@ -561,10 +652,10 @@ int DrawItem( int iX, int iY /*, int iType, int iFrame*/ ) {
 
 	//ÉRÉCÉìÇÃï`âÊ
 	if ( map[ iY ][ iX ].ItemType == _ITEMT_COIN ) {
+		PlaySoundMem( Sound.coin, DX_PLAYTYPE_BACK, FALSE );
 		if ( map[ iY ][ iX ].ItemTrans++ > 6 ) {
 			map[ iY ][ iX ].ItemTrans = 0;
 		}
-
 		if ( map[ iY ][ iX ].ItemFrame++ < 12 ) {
 			map[ iY ][ iX ].ItemY -= 8;
 		} else if ( map [ iY ][ iX ].ItemFrame >= 12 ) {
@@ -586,6 +677,7 @@ int DrawItem( int iX, int iY /*, int iType, int iFrame*/ ) {
 			}
 			else if ( map[ iY ][ iX ].ItemFrame < 25 ) {
 				map[ iY ][ iX ].ItemY -= 1;
+				PlaySoundMem( Sound.kinoko, DX_PLAYTYPE_BACK, FALSE );
 			}
 			else if ( map[ iY ][ iX ].ItemFrame >= 28 ) {
 				//ç∂âEÇ…ìÆÇ≠
@@ -612,12 +704,13 @@ int DrawItem( int iX, int iY /*, int iType, int iFrame*/ ) {
 				}
 			}
 			//ìñÇΩÇËîªíË
-			if ( HitObj( Player.PlayerX, Player.PlayerY, map[ iY ][ iX ].ItemX, map[ iY ][ iX ].ItemY, _MASS_HALF, _MASS_HALF ) == _HIT_TRUE ) {
+			if ( HitObj( Player.PlayerX, Player.PlayerY, map[ iY ][ iX ].ItemX, map[ iY ][ iX ].ItemY, _MASS_HALF, _MASS_HALF, _MASS_HALF, _MASS_HALF ) == _HIT_TRUE ) {
+				PlaySoundMem(Sound.powerUp,DX_PLAYTYPE_BACK,FALSE);
 				Player.PlayerState = 2;
 				Player.PlayerAnime = 1;
 				return TRUE;
 			}
-			//âÊñ îÉÇ¢Ç…è¡Ç¶ÇΩèÍçá
+			//âÊñ äOÇ…è¡Ç¶ÇΩèÍçá
 			if ( map[ iY ][ iX ].ItemY >= ( 15 * _MASS_Y ) || map[ iY ][ iX ].ItemX >= ( 15 * _MASS_X ) || map[ iY ][ iX ].ItemX < ( 0 - _MASS_X ) ) {
 				return TRUE;
 			}
@@ -633,8 +726,9 @@ int DrawItem( int iX, int iY /*, int iType, int iFrame*/ ) {
 				map[ iY ][ iX ].ItemY -= 1;
 			}
 			//ìñÇΩÇËîªíË
-			if ( HitObj( Player.PlayerX, Player.PlayerY, map[ iY ][ iX ].ItemX, map[ iY ][ iX ].ItemY, _MASS_HALF, _MASS_HALF ) == _HIT_TRUE ) {
+			if ( HitObj( Player.PlayerX, Player.PlayerY, map[ iY ][ iX ].ItemX, map[ iY ][ iX ].ItemY, _MASS_HALF, _MASS_HALF, _MASS_HALF, _MASS_HALF ) == _HIT_TRUE ) {
 				if ( Player.PlayerState == 2 ) {
+					PlaySoundMem(Sound.powerUp,DX_PLAYTYPE_BACK,FALSE);
 					Player.PlayerAnime = 1;
 					Player.PlayerState = 3;
 				} else if ( Player.PlayerState == 3 ) {
@@ -658,6 +752,7 @@ int DrawItem( int iX, int iY /*, int iType, int iFrame*/ ) {
 //ÉvÉåÉCÉÑÅ[ï`âÊ
 void DrawPlayer() {
 
+	static int i = 0;
 	static int PDrawMode = 0;	//0=ìÆÇ¢ÇƒÇ»Ç¢ÅA1=âEìÆÇ¢ÇƒÇ¢ÇÈÅA 2=ç∂ìÆÇ¢ÇƒÇÈ
 	static int SlideMode = 0;	//1=âEääÇËÅA2=ç∂ääÇË
 	static int JumpState = 1;	//ÉWÉÉÉìÉvÇÃèÛë‘ÇéùÇ¡ÇƒÇ®Ç≠
@@ -667,15 +762,30 @@ void DrawPlayer() {
 	if ( ( ( opt.NowK & PAD_INPUT_M ) == 0 ) && JumpState == 1 ) {
 		JumpState = 0;
 	}
+	i++;
+
+	//ëﬁâªéûÇÃàÍéûìIÇ»ñ≥ìGèÛë‘
+	if ( Player.dgnFlg == 1 ) {
+		static int inFlg = 0;
+		if ( inFlg++ > 120 ) {
+			Player.dgnFlg = 0;
+			inFlg = 0;
+		}
+	}
+
+	//ìﬁóéÇ…óéÇøÇΩÇÁ
+	if ( Player.PlayerY >= ( 15 * _MASS_Y ) ) {
+		Player.DeathFlg = 1;
+	}
 
 	//ï‡Ç≠ÉAÉjÉÅÅ[ÉVÉáÉì
-	if ( Player.PlayerAnime == 0 ) {
+	if ( Player.PlayerAnime == 0 || Player.DeathFlg == 0 ) {
 		if( ( 0 == FR_Control.FrameCount % WalkMove ) && /*opt.NowK != NULL*/ Player.PSpeed >= 0.0f ){
 			if ( Player.JumpFrame == 0 )	Player.P_i_f++;
 			if(Player.P_i_f >= 3 && Player.JumpFrame == 0 )	Player.P_i_f=0;
 			if ( Player.JumpFrame > 0 )	Player.P_i_f = 3;
 		}
-		else if( Player.PSpeed <= 0.0f ){
+		else if( Player.PSpeed <= 0.0f ) {
 			Player.P_i_f = 0;	//ÉLÅ[ëÄçÏÇÇ‚ÇﬂÇΩéû
 		}
 	}
@@ -689,7 +799,7 @@ void DrawPlayer() {
 			PDrawMode = 1;
 		}
 		if ( PDrawMode == 1 ) {
-			if ( Player.PlayerAnime == 0 ) {
+			if ( Player.PlayerAnime == 0 && Player.DeathFlg == 0 ) {
 				//ÉmÅ[É}ÉãÉ}ÉäÉIÇæÇ∆
 				if ( Player.PlayerState == 1 ) {
 					if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
@@ -718,7 +828,7 @@ void DrawPlayer() {
 					}
 				}
 				//ÉXÅ[ÉpÅ[É}ÉäÉIà»è„ÇæÇ∆
-				else if ( Player.PlayerState == 2 || Player.PlayerState ) {
+				else if ( Player.PlayerState == 2 || Player.PlayerState == 3 ) {
 					if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
 						if ( Player.PSpeed < 6.0f ) {
 							Player.PSpeed += 0.2f;				//â¡ë¨ìxê›íË
@@ -746,22 +856,24 @@ void DrawPlayer() {
 				}
 			}
 			Player.P_lr_f = _DIRECT_RIGHT;					//ç∂âEîΩì]ÉtÉâÉO
-			//ï‡çséûÇÃÉvÉåÉCÉÑÅ[ï`âÊ
-			if ( Player.PlayerState == 1 ) {									//ÉmÅ[É}ÉãÉ}ÉäÉI
-				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, FALSE );		
-			}
-			else if ( Player.PlayerState == 2 ) {								//ÉXÅ[ÉpÅ[É}ÉäÉI
-				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_WalkS[Player.P_i_f], TRUE, FALSE );		
-			}
-			else if ( Player.PlayerState == 3 ) {								//ÉtÉ@ÉCÉÑÅ[É}ÉäÉI
-				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_WalkF[Player.P_i_f], TRUE, FALSE );	
+			if ( Player.DeathFlg == 0 ) {
+				//ï‡çséûÇÃÉvÉåÉCÉÑÅ[ï`âÊ
+				if ( Player.PlayerState == 1 ) {									//ÉmÅ[É}ÉãÉ}ÉäÉI
+					DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, FALSE );		
+				}
+				else if ( Player.PlayerState == 2 ) {								//ÉXÅ[ÉpÅ[É}ÉäÉI
+					DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_WalkS[Player.P_i_f], TRUE, FALSE );		
+				}
+				else if ( Player.PlayerState == 3 ) {								//ÉtÉ@ÉCÉÑÅ[É}ÉäÉI
+					DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_WalkF[Player.P_i_f], TRUE, FALSE );	
+				}
 			}
 		}
 		/** ã}ÉuÉåÅ[ÉLÇÃèàóù **/
 		if ( PDrawMode == 2 && Player.PSpeed > 0.0f ) {
 			Player.P_lr_f=0;					//ç∂âEîΩì]ÉtÉâÉO
 			SlideMode = 1;
-			if ( Player.PlayerAnime == 0 ) {
+			if ( Player.PlayerAnime == 0 && Player.DeathFlg == 0 ) {
 				//ÉmÅ[É}ÉãÉ}ÉäÉIÇæÇ∆
 				if ( Player.PlayerState == 1 ) {
 					if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
@@ -806,14 +918,16 @@ void DrawPlayer() {
 				}
 			}
 			//ÉvÉåÉCÉÑÅ[ï`âÊ
-			if ( Player.PlayerState == 1 ) {									//ÉmÅ[É}ÉãÉ}ÉäÉI
-				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[ 6 ], TRUE, FALSE );
-			}
-			else if ( Player.PlayerState == 2 ) {								//ÉXÅ[ÉpÅ[É}ÉäÉI
-				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Suplayer[ 7 ], TRUE, FALSE );
-			}
-			else if ( Player.PlayerState == 3 ) {								//ÉtÉ@ÉCÉÑÅ[É}ÉäÉI
-				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.FirePlayer[ 7 ], TRUE, FALSE );
+			if ( Player.DeathFlg == 0 ) {
+				if ( Player.PlayerState == 1 ) {									//ÉmÅ[É}ÉãÉ}ÉäÉI
+					DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[ 6 ], TRUE, FALSE );
+				}
+				else if ( Player.PlayerState == 2 ) {								//ÉXÅ[ÉpÅ[É}ÉäÉI
+					DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Suplayer[ 7 ], TRUE, FALSE );
+				}
+				else if ( Player.PlayerState == 3 ) {								//ÉtÉ@ÉCÉÑÅ[É}ÉäÉI
+					DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.FirePlayer[ 7 ], TRUE, FALSE );
+				}
 			}
 		}
 	}
@@ -826,7 +940,7 @@ void DrawPlayer() {
 		}
 		if ( PDrawMode == 2 ) {
 			InMode = 2;
-			if ( Player.PlayerAnime == 0 ) {
+			if ( Player.PlayerAnime == 0 && Player.DeathFlg == 0 ) {
 				//ÉmÅ[É}ÉãÉ}ÉäÉIèàóù
 				if ( Player.PlayerState == 1 ) {
 					if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
@@ -857,15 +971,17 @@ void DrawPlayer() {
 				}
 			}
 			Player.P_lr_f = _DIRECT_LEFT;					//ç∂âEîΩì]ÉtÉâÉO
-			//ÉvÉåÉCÉÑÅ[ï`âÊ
-			if ( Player.PlayerState == 1 ) {
-				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, TRUE );			//ï‡çséûÇÃÉvÉåÉCÉÑÅ[ï`âÊ
-			} 
-			else if ( Player.PlayerState == 2 ) {
-				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_WalkS[Player.P_i_f], TRUE, TRUE );			//ï‡çséûÇÃÉvÉåÉCÉÑÅ[ï`âÊ
-			}
-			else if ( Player.PlayerState == 3 ) {
-				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_WalkF[Player.P_i_f], TRUE, TRUE );			//ï‡çséûÇÃÉvÉåÉCÉÑÅ[ï`âÊ
+			if ( Player.DeathFlg == 0 ) {
+				//ÉvÉåÉCÉÑÅ[ï`âÊ
+				if ( Player.PlayerState == 1 ) {
+					DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, TRUE );			//ï‡çséûÇÃÉvÉåÉCÉÑÅ[ï`âÊ
+				} 
+				else if ( Player.PlayerState == 2 ) {
+					DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_WalkS[Player.P_i_f], TRUE, TRUE );			//ï‡çséûÇÃÉvÉåÉCÉÑÅ[ï`âÊ
+				}
+				else if ( Player.PlayerState == 3 ) {
+					DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_WalkF[Player.P_i_f], TRUE, TRUE );			//ï‡çséûÇÃÉvÉåÉCÉÑÅ[ï`âÊ
+				}
 			}
 		}
 		/** ã}ÉuÉåÅ[ÉLÇÃèàóù **/
@@ -873,7 +989,7 @@ void DrawPlayer() {
 			SlideMode = 2;
 			InMode2 = 2;
 			Player.P_lr_f=1;					//ç∂âEîΩì]ÉtÉâÉO
-			if ( Player.PlayerAnime == 0 ) {
+			if ( Player.PlayerAnime == 0 && Player.DeathFlg == 0 ) {
 				//ÉmÅ[É}ÉãÉ}ÉäÉIèàóù
 				if ( Player.PlayerState == 1 ) {
 					if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
@@ -931,21 +1047,23 @@ void DrawPlayer() {
 					}
 				}
 			}
-			if ( Player.PlayerState == 1 ) {
-				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[ 6 ], TRUE, TRUE );
-			} 
-			else if ( Player.PlayerState == 2 ) {
-				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Suplayer[ 7 ], TRUE, TRUE );
-			}
-			else if ( Player.PlayerState == 3 ) {
-				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.FirePlayer[ 7 ], TRUE, TRUE );
+			if ( Player.DeathFlg == 0 ) {
+				if ( Player.PlayerState == 1 ) {
+					DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[ 6 ], TRUE, TRUE );
+				} 
+				else if ( Player.PlayerState == 2 ) {
+					DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Suplayer[ 7 ], TRUE, TRUE );
+				}
+				else if ( Player.PlayerState == 3 ) {
+					DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.FirePlayer[ 7 ], TRUE, TRUE );
+				}
 			}
 		}
 	}
 	/*****  ÇªÇÃëºèàóù   *****/
 	else {
 		if ( Player.PSpeed > 0.0f ) {
-			if ( Player.PlayerAnime == 0 ) {
+			if ( Player.PlayerAnime == 0 && Player.DeathFlg == 0 ) {
 				Player.PSpeed -= 0.2f;
 				/*****  É}ÉäÉIääÇËèàóù   *****/
 				if ( Player.PSpeed > 0.0f ) {
@@ -1023,15 +1141,17 @@ void DrawPlayer() {
 					}
 				}
 			}
-			//ÉvÉåÉCÉÑÅ[ï`âÊ
-			if ( Player.PlayerState == 1 ) {				//ÉmÅ[É}ÉãÉ}ÉäÉI
-				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[ Player.P_i_f ], TRUE , Player.P_lr_f );
-			}
-			else if ( Player.PlayerState == 2 ) {			//ÉXÅ[ÉpÅ[É}ÉäÉI
-				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Suplayer[ Player.P_i_f ], TRUE , Player.P_lr_f );
-			}
-			else if ( Player.PlayerState == 3 ) {			//ÉtÉ@ÉCÉÑÅ[É}ÉäÉI
-				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.FirePlayer[ Player.P_i_f ], TRUE , Player.P_lr_f );
+			if ( Player.DeathFlg == 0 ) {
+				//ÉvÉåÉCÉÑÅ[ï`âÊ
+				if ( Player.PlayerState == 1 ) {				//ÉmÅ[É}ÉãÉ}ÉäÉI
+					DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[ Player.P_i_f ], TRUE , Player.P_lr_f );
+				}
+				else if ( Player.PlayerState == 2 ) {			//ÉXÅ[ÉpÅ[É}ÉäÉI
+					DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Suplayer[ Player.P_i_f ], TRUE , Player.P_lr_f );
+				}
+				else if ( Player.PlayerState == 3 ) {			//ÉtÉ@ÉCÉÑÅ[É}ÉäÉI
+					DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.FirePlayer[ Player.P_i_f ], TRUE , Player.P_lr_f );
+				}
 			}
 		}
 		if ( Player.PSpeed <= 0.0f ) {
@@ -1050,7 +1170,7 @@ void DrawPlayer() {
 		JumpState = 2;
 	}
 	
-	if ( Player.PlayerAnime == 0 ) {
+	if ( Player.PlayerAnime == 0 && Player.DeathFlg == 0 ) {
 		if ( Player.JumpMode == TRUE ) {
 			if ( Player.PlayerState == 1 ) {
 				//è„ï˚å¸ÇÃÉuÉçÉbÉNÇÃìñÇΩÇËîªíË
@@ -1159,12 +1279,13 @@ void DrawPlayer() {
 	}
 
 	/*****     óéâ∫èàóù     *****/
-	if ( Player.PlayerAnime == 0 ) {
+	if ( Player.PlayerAnime == 0 && Player.DeathFlg == 0 ) {
 
 		//ÉmÅ[É}ÉãÉ}ÉäÉIèàóù
 		if ( Player.PlayerState == 1 ) {
 			if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && Player.JumpMode == FALSE && HitBlockDown( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
 				JumpState = 4;
+				Player.DownFlg = 1;
 				if ( Player.PYSpeed < 8.0f )	Player.PYSpeed += 0.8f;
 				Player.PlayerY += ( int )Player.PYSpeed;
 				//ÇﬂÇËçûÇ›ñhé~èàóù
@@ -1178,9 +1299,11 @@ void DrawPlayer() {
 			else if ( Player.JumpMode == FALSE && HitBlockDown( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
 				if ( JumpState == 3 && ( opt.NowK & PAD_INPUT_M ) == 0 ) {
 					JumpState = 0;
+					Player.DownFlg = 0;
 				}
 				if ( JumpState == 4 && ( opt.NowK & PAD_INPUT_M ) == 0 ) {
 					JumpState = 0;
+					Player.DownFlg = 0;
 				}
 			}
 			else {
@@ -1191,6 +1314,7 @@ void DrawPlayer() {
 		else if ( Player.PlayerState == 2 || Player.PlayerState == 3 ) {
 			if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && Player.JumpMode == FALSE && HitBlockDown( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
 				JumpState = 4;
+				Player.DownFlg = 1;
 				if ( Player.PYSpeed < 8.0f )	Player.PYSpeed += 0.8f;
 				Player.PlayerY += ( int )Player.PYSpeed;
 				//ÇﬂÇËçûÇ›ñhé~èàóù
@@ -1204,9 +1328,11 @@ void DrawPlayer() {
 			else if ( Player.JumpMode == FALSE && HitBlockDown( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
 				if ( JumpState == 3 && ( opt.NowK & PAD_INPUT_M ) == 0 ) {
 					JumpState = 0;
+					Player.DownFlg = 0;
 				}
 				if ( JumpState == 4 && ( opt.NowK & PAD_INPUT_M ) == 0 ) {
 					JumpState = 0;
+					Player.DownFlg = 0;
 				}
 			}
 			else {
@@ -1216,7 +1342,7 @@ void DrawPlayer() {
 	}
 
 	//ÉpÉèÅ[ÉAÉbÉvÉAÉjÉÅÅ[ÉVÉáÉì
-	if ( Player.PlayerAnime == 1 ) {
+	if ( Player.PlayerAnime == 1 && Player.DeathFlg == 0 ) {
 		if ( Player.PAnimeFrame++ < 1 ) {
 			if ( Player.PlayerState == 2 ) {
 				Player.PlayerY -= _MASS_HALF;
@@ -1224,6 +1350,7 @@ void DrawPlayer() {
 		}
 		else if ( Player.PAnimeFrame > 90 ) {
 			Player.PlayerAnime = 0;
+			Player.PAnimeFrame = 0;
 		}
 	}
 
@@ -1233,12 +1360,14 @@ void DrawPlayer() {
 		//ÉmÅ[É}ÉãÉ}ÉäÉIèàóù
 		if ( Player.PlayerState == 1 ) {
 			if ( HitBlockDown( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) != _HIT_TRUE ) {
+				PlaySoundMem( Sound.pole, DX_PLAYTYPE_BACK, FALSE );
 				Player.PlayerY += 3;
 			}
 		}
 		//ÉXÅ[ÉpÅ[É}ÉäÉIà»è„èàóù
 		else if ( Player.PlayerState == 2 || Player.PlayerState == 3 ) {
 			if ( HitBlockDown( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) != _HIT_TRUE ) {
+				PlaySoundMem( Sound.pole, DX_PLAYTYPE_BACK, FALSE );
 				Player.PlayerY += 3;
 			}
 		}
@@ -1267,6 +1396,8 @@ void DrawPlayer() {
 					pg_walk=1;
 					break;
 			}
+			StopSoundMem( Sound.pole );
+			PlaySoundMem( Sound.goal, DX_PLAYTYPE_BACK, FALSE );
 		}
 		//ÉmÅ[É}ÉãÉ}ÉäÉIèàóù
 		if ( Player.PlayerState == 1 ) {
@@ -1283,12 +1414,6 @@ void DrawPlayer() {
 			}
 		}
 	}
-
-	//static int i=7;
-	//if(Player.GoalFlg==1 && 0==FR_Control.FrameCount%5){
-	//	if(i==8)i=7;
-	//	else if(i==7)i=8;
-	//}
 
 	//ÉSÅ[ÉãâÊëúï`âÊ
 	if ( Player.PlayerState == 1 ) {			//ÉmÅ[É}ÉãÉ}ÉäÉI
@@ -1328,36 +1453,91 @@ void DrawPlayer() {
 		}
 	}
 
+	//éÄñSèàóù
+	if ( Player.DeathFlg == 1 ) {
+		static int waitTime = 0;
+		static int moveFlg = 0;
+		if ( waitTime++ < 1 ) {
+			Player.Life--;
+			if ( CheckSoundMem( Sound.bgm_death ) == 0 ) {
+				PlaySoundMem( Sound.bgm_death, DX_PLAYTYPE_BACK );
+			}
+			//Player.PJSpeed = 0.0f;
+			Player.PYSpeed = 0.0f;
+		}
+		else if ( waitTime > 180 ) {
+			GAMESTATE = GAME_INIT;
+			DrawBox( 0, 0, _WINDOWSIZE_X, _WINDOWSIZE_Y, 0x000000, TRUE );
+			waitTime = 0;
+			moveFlg = 0;
+		}
+
+		//if ( waitTime > 30 && Player.PJSpeed > 0.0f ) {
+		//	Player.PJSpeed -= 0.2f;
+		//	Player.PlayerY -= Player.PJSpeed;
+		//}
+		//if ( Player.PJSpeed <= 0.0f && Player.PYSpeed <= 0.0f ) {
+		//	Player.PYSpeed += 0.2f;
+		//	Player.PlayerY += Player.PYSpeed;
+		//}
+		//if ( Player.PYSpeed > 0.0f ) {
+		//	if ( Player.PYSpeed <= 8.0f ) {
+		//		Player.PYSpeed += 0.2f;
+		//	}
+		//	Player.PlayerY += Player.PYSpeed;
+		//}
+
+		if ( waitTime > 30 && moveFlg == 0 && Player.PYSpeed > -6.0f ) {
+			Player.PYSpeed -= 0.4f;
+		}
+		else if ( waitTime > 30 && moveFlg == 0 && Player.PYSpeed <= 8.0f ) {
+			moveFlg = 1;
+		}
+		if ( waitTime > 30 && moveFlg == 1 && Player.PYSpeed <= 8.0f ) {
+			Player.PYSpeed += 0.4f;
+		}
+		Player.PlayerY += Player.PYSpeed;
+
+	}
+
+
 	//ÉvÉåÉCÉÑÅ[ï`âÊ
-	if ( Player.PlayerState == 1 ) {
-		if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpMode == 0 )	
-			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[0], TRUE , Player.P_lr_f );	//ÉWÉÉÉìÉvÇµÇƒÇ»Ç¢Ç∆Ç´
-		if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpMode != 0 )	
-			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[4], TRUE , Player.P_lr_f );	//ÉWÉÉÉìÉvÇµÇΩéû
+	if ( Player.DeathFlg == 0 ) {
+		if ( Player.PlayerState == 1 ) {
+			if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpMode == 0 )	
+				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[0], TRUE , Player.P_lr_f );	//ÉWÉÉÉìÉvÇµÇƒÇ»Ç¢Ç∆Ç´
+			if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpMode != 0 )	
+				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[4], TRUE , Player.P_lr_f );	//ÉWÉÉÉìÉvÇµÇΩéû
+		}
+		else if ( Player.PlayerState == 2 ) {
+			if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpMode == 0 )	
+				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Suplayer[0], TRUE , Player.P_lr_f );	//ÉWÉÉÉìÉvÇµÇƒÇ»Ç¢Ç∆Ç´
+			if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpMode != 0 )	
+				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Suplayer[4], TRUE , Player.P_lr_f );	//ÉWÉÉÉìÉvÇµÇΩéû
+		}
+		else if ( Player.PlayerState == 3 ) {
+			if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpMode == 0 )	
+				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.FirePlayer[0], TRUE , Player.P_lr_f );	//ÉWÉÉÉìÉvÇµÇƒÇ»Ç¢Ç∆Ç´
+			if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpMode != 0 )	
+				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.FirePlayer[4], TRUE , Player.P_lr_f );	//ÉWÉÉÉìÉvÇµÇΩéû
+		}
 	}
-	else if ( Player.PlayerState == 2 ) {
-		if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpMode == 0 )	
-			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Suplayer[0], TRUE , Player.P_lr_f );	//ÉWÉÉÉìÉvÇµÇƒÇ»Ç¢Ç∆Ç´
-		if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpMode != 0 )	
-			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Suplayer[4], TRUE , Player.P_lr_f );	//ÉWÉÉÉìÉvÇµÇΩéû
-	}
-	else if ( Player.PlayerState == 3 ) {
-		if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpMode == 0 )	
-			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.FirePlayer[0], TRUE , Player.P_lr_f );	//ÉWÉÉÉìÉvÇµÇƒÇ»Ç¢Ç∆Ç´
-		if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpMode != 0 )	
-			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.FirePlayer[4], TRUE , Player.P_lr_f );	//ÉWÉÉÉìÉvÇµÇΩéû
+
+	//éÄñSéûÇÃâÊëúï`âÊ
+	else if ( Player.DeathFlg == 1 ) {
+		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[5], TRUE , FALSE );	//ÉWÉÉÉìÉvÇµÇΩéû
 	}
 
 #ifdef _DEBUGMODE
 	SetFontSize( 12 );
-	DrawFormatString( 420,  50, 0xff0000, "OldK = %d", opt.OldK );				//OldKï`âÊ
+	DrawFormatString( 420,  50, 0xff0000, "OldK = %d", i );				//OldKï`âÊ
 	DrawFormatString( 420,  70, 0xff0000, "NowK = %d", opt.NowK );				//NowKï`âÊ
-	DrawFormatString( 420,  90, 0xff0000, "PdrM = %d", PDrawMode );				//PDrawModeï`âÊ
-	DrawFormatString( 420, 110, 0xff0000, "LR_F = %d", Player.P_lr_f );			//P_lr_fï`âÊ
+	DrawFormatString( 420,  90, 0xff0000, "PAnm = %d", Player.PlayerAnime );	//PDrawModeï`âÊ
+	DrawFormatString( 420, 110, 0xff0000, "Life = %d", Player.Life );			//P_lr_fï`âÊ
 	DrawFormatString( 420, 130, 0xff0000, "PlrX = %d", Player.PlayerX );		//PlayerXï`âÊ
 	DrawFormatString( 420, 150, 0xff0000, "PlrY = %d", Player.PlayerY );		//PlayerYï`âÊ
 	DrawFormatString( 420, 170, 0xff0000, "Scrl = %d", Player.MapScrollX );		//Scrollï`âÊ
-	DrawFormatString( 420, 190, 0xff0000, "Pspd = %.2f", Player.PSpeed );		//PSpeedï`âÊ
+	DrawFormatString( 420, 190, 0xff0000, "DthF = %d", Player.DeathFlg );		//PSpeedï`âÊ
 	DrawFormatString( 420, 210, 0xff0000, "Pint = %d", Player.Point );			//InModeï`âÊ
 	DrawFormatString( 420, 230, 0xff0000, "Coin = %d", Player.CoinNum );		//ÉRÉCÉìñáêîï`âÊ
 	DrawFormatString( 420, 250, 0xff0000, "PlrS = %d", Player.PlayerState );	//InMode2ï`âÊ
@@ -1371,9 +1551,138 @@ void DrawPlayer() {
 #endif
 }
 
+//ÉGÉlÉ~Å[ï`âÊ
+void DrawEnemy() {
+
+	if ( Player.PlayerAnime == 0 && Player.DeathFlg == 0 ) {
+
+		for ( int i = 0; i < _ENEMY_NUM; i++ ) {
+
+			if ( Enemy[ i ].EnemyX < ( 18 * _MASS_X ) ) {
+
+				if ( Enemy[ i ].PressFlg == 0 ) {
+					//ç∂âEÇ…ìÆÇ≠
+					if ( Enemy[ i ].EDirect == _DIRECT_RIGHT ) {
+						if ( HitBlockRight( Enemy[ i ].EnemyX + Player.MapScrollX, Enemy[ i ].EnemyY, _MASS_HALF, _MASS_ENEMY, FALSE, _HITW_ENEMY ) == _HIT_FALSE ) {
+							Enemy[ i ].EnemyX += 1;
+						} else if ( HitBlockRight( Enemy[ i ].EnemyX + Player.MapScrollX, Enemy[ i ].EnemyY, _MASS_HALF, _MASS_ENEMY, FALSE, _HITW_ENEMY ) == _HIT_TRUE ) {
+							Enemy[ i ].EDirect = _DIRECT_LEFT;
+						}
+					}
+					else if ( Enemy[ i ].EDirect == _DIRECT_LEFT ) {
+						if ( HitBlockLeft( Enemy[ i ].EnemyX + Player.MapScrollX, Enemy[ i ].EnemyY, _MASS_HALF, _MASS_ENEMY, FALSE, _HITW_ENEMY ) == _HIT_FALSE ) {
+							Enemy[ i ].EnemyX -= 1;
+						} else if ( HitBlockLeft( Enemy[ i ].EnemyX + Player.MapScrollX, Enemy[ i ].EnemyY, _MASS_HALF, _MASS_ENEMY, FALSE, _HITW_ENEMY ) == _HIT_TRUE ) {
+							Enemy[ i ].EDirect = _DIRECT_RIGHT;
+						}
+					}
+					/*****     óéâ∫èàóù     *****/
+					if ( HitBlockDown( Enemy[ i ].EnemyX + Player.MapScrollX, Enemy[ i ].EnemyY, _MASS_HALF , _MASS_ENEMY, FALSE, _HITW_ENEMY ) == _HIT_FALSE ) {
+						if ( Enemy[ i ].EYSpeed < 8.0f )	Enemy[ i ].EYSpeed += 0.8f;
+						Enemy[ i ].EnemyY += ( int )Enemy[ i ].EYSpeed;
+					} else {
+						Enemy[ i ].EYSpeed = 0.0f;
+					}
+
+					//ÉvÉåÉCÉÑÅ[Ç∆ÇÃìñÇΩÇËîªíË(ÉmÅ[É}ÉãÉ}ÉäÉI)
+					if ( Player.PlayerState == 1 && Player.dgnFlg == 0 ) {
+						if ( Player.DownFlg == 0 ) {
+							if ( HitObj( Player.PlayerX, Player.PlayerY, Enemy[ i ].EnemyX, Enemy[ i ].EnemyY, _MASS_HALF, _MASS_HALF, _MASS_HALF, _MASS_HALF ) == _HIT_TRUE ) {
+								//Player.DeathFlg = 1;
+								Player.PlayerState = 1;
+								Player.dgnFlg = 1;
+							}
+						}
+						else if ( Player.DownFlg == 1 ) {
+							if ( HitObjDown( Player.PlayerX, Player.PlayerY, Enemy[ i ].EnemyX, Enemy[ i ].EnemyY, _MASS_HALF, _MASS_HALF, _MASS_HALF, _MASS_HALF ) == _HIT_TRUE ) {
+								Enemy[ i ].PressFlg = 1;
+								Player.JumpMode = TRUE;
+								Player.JumpFrame = 0;
+								Player.PJSpeed = 7.0f;
+							} 
+							else if ( HitObjDown( Player.PlayerX, Player.PlayerY, Enemy[ i ].EnemyX, Enemy[ i ].EnemyY, _MASS_HALF, _MASS_HALF, _MASS_HALF, _MASS_HALF ) == _HIT_DEATH ) {
+								//Player.DeathFlg = 1;
+								Player.PlayerState = 1;
+								Player.dgnFlg = 1;
+							}
+						}
+					}
+					//ÉvÉåÉCÉÑÅ[Ç∆ÇÃìñÇΩÇËîªíË(ÉXÅ[ÉpÅ[É}ÉäÉIà»è„)
+					else if ( ( Player.PlayerState == 2 || Player.PlayerState == 3 ) && Player.dgnFlg == 0 ) {
+						if ( Player.DownFlg == 0 ) {
+							if ( HitObj( Player.PlayerX, Player.PlayerY, Enemy[ i ].EnemyX, Enemy[ i ].EnemyY, _MASS_Y, _MASS_HALF, _MASS_HALF, _MASS_HALF ) == _HIT_TRUE ) {
+								Player.DeathFlg = 1;
+							}
+						}
+						else if ( Player.DownFlg == 1 ) {
+							if ( HitObjDown( Player.PlayerX, Player.PlayerY, Enemy[ i ].EnemyX, Enemy[ i ].EnemyY, _MASS_Y, _MASS_HALF, _MASS_HALF, _MASS_HALF ) == _HIT_TRUE ) {
+								Enemy[ i ].PressFlg = 1;
+								Player.JumpMode = TRUE;
+								Player.JumpFrame = 0;
+								Player.PJSpeed = 7.0f;
+							} 
+							else if ( HitObjDown( Player.PlayerX, Player.PlayerY, Enemy[ i ].EnemyX, Enemy[ i ].EnemyY, _MASS_Y, _MASS_HALF, _MASS_HALF, _MASS_HALF ) == _HIT_DEATH ) {
+								Player.DeathFlg = 1;
+							}
+						}
+					}
+				}
+				else if ( Enemy[ i ].PressFlg == 1 ) {
+					static int eliminate = 0;
+					if ( eliminate++ > 60 ) {
+						Enemy[ i ].PressFlg = 2;
+						eliminate = 0;
+					}
+				}
+			}
+			
+			if ( Enemy[ i ].EnemyX < -( 4 * _MASS_X ) ) {
+				Enemy[ i ].PressFlg = 2;
+			}
+		}
+	}
+
+	for ( int i = 0; i < _ENEMY_NUM; i++ ) {
+		if ( Enemy[ i ].EnemyType == 1 ) {
+			static int kuriF = 0;
+			if ( 0 == FR_Control.FrameCount % 5 ) {
+				if ( kuriF == 0 )	kuriF = 1;
+				else if ( kuriF == 1 )	kuriF = 0;
+			}
+			if ( Enemy[ i ].PressFlg == 0 ) {
+				DrawRotaGraph( Enemy[ i ].EnemyX, Enemy[ i ].EnemyY, 1.0f, 0, Pic.EnemyMob[ 0 ], TRUE, kuriF );
+			}
+			else if ( Enemy[ i ].PressFlg == 1 ) {
+				DrawRotaGraph( Enemy[ i ].EnemyX, Enemy[ i ].EnemyY, 1.0f, 0, Pic.EnemyMob[ 1 ], TRUE, FALSE );
+			}
+		}
+		else if ( Enemy[ i ].EnemyType == 2 ) {
+			static int nokoF = 2;
+			if ( 0 == FR_Control.FrameCount % 5 ) {
+				if ( nokoF == 2 )	nokoF = 3;
+				else if ( nokoF == 3 )	nokoF = 2;
+			}
+			if ( Enemy[ i ].PressFlg == 0 ) {
+				DrawRotaGraph( Enemy[ i ].EnemyX, Enemy[ i ].EnemyY, 1.0f, 0, Pic.EnemyMob[ nokoF ], TRUE, Enemy[ i ].EDirect );
+			}
+			else if ( Enemy[ i ].PressFlg == 1 ) {
+				DrawRotaGraph( Enemy[ i ].EnemyX, Enemy[ i ].EnemyY, 1.0f, 0, Pic.EnemyMob[ 11 ], TRUE, FALSE );
+			}
+		}
+	}
+
+#ifdef _DEBUGMODE
+	DrawFormatString( 20, 50, 0xff0000, "EnemyX = %d", Enemy[ 3 ].EnemyX );
+	DrawFormatString( 20, 80, 0xff0000, "EnemyY = %d", Enemy[ 3 ].EnemyY );
+#endif
+
+}
+
 //âÊëúì«çû
 int LoadImages() {
 
+	//É^ÉCÉgÉãÉCÉÅÅ[ÉWì«Ç›çûÇ›
+	if ( ( Pic.TitleImg = LoadGraph( "images/TitleImage01.png" ) ) == -1 )	return -1;
 	//ÉuÉçÉbÉNì«çû
 	if ( LoadDivGraph( "images/backimage.png", 84, 12, 7, 32, 32, Pic.StageBlock + 1 ) == -1 )	return -1;
 	//ÉLÉÉÉâÉNÉ^Å[ì«çû
@@ -1382,6 +1691,8 @@ int LoadImages() {
 	if ( LoadDivGraph( "images/super_mario_chara.png", 15, 5, 3, 32, 64, Pic.Suplayer ) == -1 )	return -1;
 	//ÉtÉ@ÉCÉÑÅ[É}ÉäÉIì«Ç›çûÇ›
 	if ( LoadDivGraph( "images/fire_mario_chara .png", 15, 5, 3, 32, 64, Pic.FirePlayer ) == -1 )	return -1;
+	//ìGì«Ç›çûÇ›
+	if ( LoadDivGraph( "images/mob.png", 20, 10, 2, 32, 48, Pic.EnemyMob ) == -1 )	return -1;
 
 	Pic.P_Walk[0]=Pic.Player[1];
 	Pic.P_Walk[1]=Pic.Player[2];
@@ -1401,8 +1712,32 @@ int LoadImages() {
 	return TRUE;
 }
 
+int LoadSounds() {
+	// ÉRÉCÉì
+	if ((Sound.coin = LoadSoundMem("BGM_SE/coin.wav")) == -1)					return -1;
+	// ÉLÉmÉR
+	if ((Sound.kinoko = LoadSoundMem("BGM_SE/mario_powerup.wav")) == -1)		return -1;
+	// É|Å[Éã
+	if ((Sound.pole = LoadSoundMem("BGM_SE/mario_goalflag.wav")) == -1)			return -1;
+	// ÉSÅ[Éã
+	if ((Sound.goal = LoadSoundMem("BGM_SE/bgm_goal.wav")) == -1)				return -1;
+	//ÉpÉèÅ[ÉAÉbÉv
+	if ((Sound.powerUp = LoadSoundMem("BGM_SE/powerup.wav")) == -1)				return -1;
+	//BGM
+	if ( ( Sound.bgm_ground = LoadSoundMem( "BGM_SE/bgm_tijou.wav" ) ) == -1 )	return -1;
+	//éÄñSâπ
+	if ( ( Sound.bgm_death = LoadSoundMem( "BGM_SE/mario_death.wav" ) ) == -1 )	return -1;
+	//ÉuÉçÉbÉNÇ™íµÇÀÇÈÇ∆Ç´ÇÃâπ
+	if ( ( Sound.BounceBlock = LoadSoundMem( "BGM_SE/block_ataru.wav" ) ) == -1 )	return -1;
+	//ÉuÉçÉbÉNÇ™âÛÇÍÇÈâπ
+	if ( ( Sound.BreakBlock = LoadSoundMem( "BGM_SE/block_break.wav" ) ) == -1 )	return -1;
+
+	return 0;
+}
+
 //É}ÉbÉvèâä˙èàóù
 void MapInit() {
+	static int i = 0;
 	for ( int StageY = 0; StageY < _MAP_ALLSIZE_Y; StageY++ ) {
 		for ( int StageX = 0; StageX < _MAP_ALLSIZE_X; StageX++ ) {
 			map[ StageY ][ StageX ].MapNum = Map[ StageY ][ StageX ];
@@ -1414,6 +1749,12 @@ void MapInit() {
 			map[ StageY ][ StageX ].ItemType = 0;
 			map[ StageY ][ StageX ].ItemTrans = 0;
 			map[ StageY ][ StageX ].ItemDirect = 0;
+			map[ StageY ][ StageX ].Block_UP = 0;
+			map[ StageY ][ StageX ].BU_F = 0;
+			map[ StageY ][ StageX ].IYSpeed = 0.0f;
+			map[ StageY ][ StageX ].ItemX = 0;
+			map[ StageY ][ StageX ].ItemY = 0;
+			map[ StageY ][ StageX ].ItemFrame = 0;
 			//ÉnÉeÉiÉuÉçÉbÉNÇæÇ¡ÇΩèÍçá
 			if ( Map[ StageY ][ StageX ] == 2 ) {
 				map[ StageY ][ StageX ].ItemFlg = _ITEM_BRING;
@@ -1421,8 +1762,31 @@ void MapInit() {
 				map[ StageY ][ StageX ].ItemX = StageX * _MASS_X + _MASS_HALF;
 				map[ StageY ][ StageX ].ItemY = StageY * _MASS_Y + _MASS_HALF;
 			}
+			//ÇÃÇ±ÇÃÇ±
+			if ( Map[ StageY ][ StageX ] == 81 ) {
+				Enemy[ i ].EnemyType = 2;
+				Enemy[ i ].EnemyX = ( StageX * _MASS_X ) + _MASS_HALF;
+				Enemy[ i ].EnemyY = ( StageY * _MASS_Y ) + _MASS_HALF - 8;
+				Enemy[ i ].EDirect = _DIRECT_LEFT;
+				Enemy[ i ].ESpeed = 0.0f;
+				Enemy[ i ].EYSpeed = 0.0f;
+				Enemy[ i ].PressFlg = 0;
+				i++;
+			}
+			//ÉNÉäÉ{Å[
+			else if ( Map[ StageY ][ StageX ] == 72 ) {
+				Enemy[ i ].EnemyType = 1;
+				Enemy[ i ].EnemyX = ( StageX * _MASS_X ) + _MASS_HALF;
+				Enemy[ i ].EnemyY = ( StageY * _MASS_Y ) + _MASS_HALF - 8;
+				Enemy[ i ].EDirect = _DIRECT_LEFT;
+				Enemy[ i ].ESpeed = 0.0f;
+				Enemy[ i ].EYSpeed = 0.0f;
+				Enemy[ i ].PressFlg = 0;
+				i++;
+			}
 		}
 	}
+	i = 0;
 
 	map[ 8 ][ 4 ].ItemType = _ITEMT_PWRUP;
 	map[ 8 ][ 23 ].ItemType = _ITEMT_PWRUP;
@@ -1494,14 +1858,20 @@ int HitBlockUp( int oX, int oY, int pX, int pY, int jMode, int who ){
 				}
 				if ( who == _HITW_PLAYER ) {
 					if ( Player.PlayerState == 1 ) {
-						if ( map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 2 ||
+						if ( map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 1 ||
+							 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 2 ||
 							 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 3 ||
 							 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 4 ||
 							 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 5 ||
 							 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 6 ||
 							 map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 7 ) {
-								map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].BU_F=1;
+								if ( map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum != 1 ) {
+									map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].BU_F=1;
+								}
+								PlaySoundMem( Sound.BounceBlock, DX_PLAYTYPE_BACK );
+
 						}
+
 					}
 
 					if ( Player.PlayerState == 2 || Player.PlayerState == 3 )  {
@@ -1511,7 +1881,18 @@ int HitBlockUp( int oX, int oY, int pX, int pY, int jMode, int who ){
 							 map[ ( ( Player.PlayerY-_MASS_Y ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 5 ||
 							 map[ ( ( Player.PlayerY-_MASS_Y ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 6 ||
 							 map[ ( ( Player.PlayerY-_MASS_Y ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 7 ) {
-								map[ ( ( Player.PlayerY-_MASS_Y ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].BU_F=1;
+								 map[ ( ( Player.PlayerY-_MASS_Y ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].BU_F=1;
+						}
+						if ( map[ ( ( Player.PlayerY-_MASS_Y ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 1 ||
+							 map[ ( ( Player.PlayerY-_MASS_Y ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 2 ||
+							 map[ ( ( Player.PlayerY-_MASS_Y ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 3 ||
+							 map[ ( ( Player.PlayerY-_MASS_Y ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 4 ||
+							 map[ ( ( Player.PlayerY-_MASS_Y ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 5 ) {
+								 PlaySoundMem( Sound.BounceBlock, DX_PLAYTYPE_BACK );
+						}
+						if ( map[ ( ( Player.PlayerY-_MASS_Y ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 6 ||
+							 map[ ( ( Player.PlayerY-_MASS_Y ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].MapNum == 7 ) {
+								 PlaySoundMem( Sound.BreakBlock, DX_PLAYTYPE_BACK );
 						}
 					}
 				}
@@ -1548,6 +1929,12 @@ int HitBlockDown( int oX, int oY, int pX, int pY, int jMode, int who ) {
 			}
 		}
 		else if ( who == _HITW_FLAG ) {
+			if ( map[ ( ( oY+pY )/32 ) ][ ( ( oX-pX+6 )/32 ) ].MapNum == HitBlockNum[ i ]
+			|| map[ ( ( oY+pY )/32 ) ][ ( ( oX+pX-6 )/32 ) ].MapNum == HitBlockNum[ i ] ) {
+				return _HIT_TRUE;
+			}
+		}
+		else if ( who == _HITW_ENEMY ) {
 			if ( map[ ( ( oY+pY )/32 ) ][ ( ( oX-pX+6 )/32 ) ].MapNum == HitBlockNum[ i ]
 			|| map[ ( ( oY+pY )/32 ) ][ ( ( oX+pX-6 )/32 ) ].MapNum == HitBlockNum[ i ] ) {
 				return _HIT_TRUE;
@@ -1598,6 +1985,12 @@ int HitBlockRight( int oX, int oY, int pX, int pY, int jMode, int who ) {
 				return _HIT_TRUE;
 			} 
 		}
+		else if ( who == _HITW_ENEMY ) {
+			if ( map[ ( ( oY-pY+4 )/32 ) ][ ( ( oX+pX )/32 ) ].MapNum == HitBlockNum[ i ] 
+			|| map[ ( ( oY+pY-4 )/32 ) ][ ( ( oX+pX )/32 ) ].MapNum == HitBlockNum[ i ] ) {
+				return _HIT_TRUE;
+			} 
+		}
 	}
 	
 	return _HIT_FALSE;
@@ -1621,7 +2014,13 @@ int HitBlockLeft( int oX, int oY, int pX, int pY, int jMode, int who ) {
 				}
 			}
 		}
-		if ( who == _HITW_PWRUP ) {
+		else if ( who == _HITW_PWRUP ) {
+			if ( map[ ( ( oY-pY+4 )/32 ) ][ ( ( oX-pX )/32 ) ].MapNum == HitBlockNum[ i ]
+				|| map[ ( ( oY+pY-4 )/32 ) ][ ( ( oX-pX )/32 ) ].MapNum == HitBlockNum[ i ] ) {
+				return _HIT_TRUE;
+			}
+		}
+		else if ( who == _HITW_ENEMY ) {
 			if ( map[ ( ( oY-pY+4 )/32 ) ][ ( ( oX-pX )/32 ) ].MapNum == HitBlockNum[ i ]
 				|| map[ ( ( oY+pY-4 )/32 ) ][ ( ( oX-pX )/32 ) ].MapNum == HitBlockNum[ i ] ) {
 				return _HIT_TRUE;
@@ -1633,7 +2032,7 @@ int HitBlockLeft( int oX, int oY, int pX, int pY, int jMode, int who ) {
 }
 
 //ÉIÉuÉWÉFÉNÉgÇÃìñÇΩÇËîªíË
-int HitObj( int oX, int oY, int pX, int pY, int heightRad, int widthRad ) {
+int HitObj( int oX, int oY, int pX, int pY, int oheightRad, int owidthRad, int pheightRad, int pwidthRad ) {
 
 	//if ( ( ( oX - widthRad ) + ( widthRad * 2 ) < ( pX - widthRad ) ) &&
 	//	   ( ( pX - widthRad ) + ( widthRad * 2 ) < ( oX - widthRad ) ) &&
@@ -1652,8 +2051,14 @@ int HitObj( int oX, int oY, int pX, int pY, int heightRad, int widthRad ) {
 	//		 return _HIT_FALSE;
 	//}
 
-	if ( ( oX + _MASS_HALF ) > ( pX - _MASS_HALF ) && ( oX - _MASS_HALF ) < ( pX + _MASS_HALF ) ) {
-		if ( ( oY + _MASS_HALF ) > ( pY - _MASS_HALF ) && ( oY - _MASS_HALF ) < ( pY + _MASS_HALF ) ) {
+	//if ( ( oX + _MASS_HALF ) > ( pX - _MASS_HALF ) && ( oX - _MASS_HALF ) < ( pX + _MASS_HALF ) ) {
+	//	if ( ( oY + _MASS_HALF ) > ( pY - _MASS_HALF ) && ( oY - _MASS_HALF ) < ( pY + _MASS_HALF ) ) {
+	//		return _HIT_TRUE;
+	//	}
+	//}
+
+	if ( ( oX + owidthRad ) > ( pX - pwidthRad ) && ( oX - owidthRad ) < ( pX + pwidthRad ) ) {
+		if ( ( oY + oheightRad ) > ( pY - pheightRad ) && ( oY - oheightRad ) < ( pY + pheightRad ) ) {
 			return _HIT_TRUE;
 		}
 	}
@@ -1661,3 +2066,52 @@ int HitObj( int oX, int oY, int pX, int pY, int heightRad, int widthRad ) {
 	return _HIT_FALSE;
 
 }
+
+//ÉIÉuÉWÉFÉNÉgÇÃìñÇΩÇËîªíËì•Ç›ïtÇØ
+int HitObjDown( int oX, int oY, int pX, int pY, int oheightRad, int owidthRad, int pheightRad, int pwidthRad ){
+
+	//ç∂âEîªíË
+	if ( ( oX + owidthRad ) > ( pX - pwidthRad ) && ( oX - owidthRad ) < ( pX + pwidthRad ) ) {
+		if ( ( oY + oheightRad ) > ( pY - pheightRad ) && ( oY - oheightRad ) < ( pY + pheightRad ) ) {
+			return _HIT_TRUE;
+			if ( ( oY - oheightRad ) > ( pY - pheightRad ) ) {
+				return _HIT_DEATH;
+			}
+		}
+	}
+	return _HIT_FALSE;
+}
+
+//ÉvÉåÉCÉÑÅ[èâä˙èàóù
+void PlayerInit() {
+	Player.PlayerX = (  3 * _MASS_X ) + _MASS_HALF;
+	Player.PlayerY = ( 11 * _MASS_Y ) + _MASS_HALF;
+	Player.PYSpeed = 0.0f;
+	Player.PSpeed = 0.0f;
+	Player.PJSpeed = 0.0f;
+	Player.JumpFrame = 0;
+	Player.JumpMode = FALSE;
+	Player.DeathFlg = 0;
+	Player.GoalFlg = 0;
+	Player.MapScrollX = 0;
+	Player.MapSSpeed = 0;
+	Player.PDirectMode = 0;
+	Player.PJSpeed = 0;
+	Player.PlayerState = _MARIO_NOMAL;
+	Player.PlayerAnime = 0;
+	Player.PlayerState = 1;
+	Player.DownFlg = 0;
+	if ( Player.Life == 0 ) {
+		Player.Life = 5;
+	}
+}
+
+//ìGèâä˙èàóù
+//void EnemyInit() {
+//	Enemy.EnemyX = ( 10 * _MASS_X ) + _MASS_HALF;
+//	Enemy.EnemyY = ( 11 * _MASS_Y ) + _MASS_HALF - 8;
+//	Enemy.EDirect = _DIRECT_RIGHT;
+//	Enemy.ESpeed = 0.0f;
+//	Enemy.EYSpeed = 0.0f;
+//	Enemy.PressFlg = 0;
+//}
