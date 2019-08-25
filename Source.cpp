@@ -94,10 +94,13 @@ typedef enum GAME_MODE {
 
 /*****      画像構造体      *****/
 typedef struct PICTURE {
-	int Player[ 15 ];
-	int Suplayer[ 15 ];
-	int StageBlock[ 90 ];
-	int P_Walk[ 4 ];
+	int Player[ 15 ];		//ノーマルマリオ
+	int Suplayer[ 15 ];		//スーパーマリオ
+	int FirePlayer[ 15 ];	//ファイヤーマリオ
+	int StageBlock[ 90 ];	//ステージ描画ブロック
+	int P_Walk[ 4 ];		//歩行処理(ノーマル)
+	int P_WalkS[ 4 ];		//歩行処理(スーパー)
+	int P_WalkF[ 4 ];		//歩行処理(ファイヤー)
 };
 PICTURE Pic;	//画像構造体宣言
 
@@ -685,59 +688,131 @@ void DrawPlayer() {
 		}
 		if ( PDrawMode == 1 ) {
 			if ( Player.PlayerAnime == 0 ) {
-				if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
-					if ( Player.PSpeed < 6.0f ) {
-						Player.PSpeed += 0.2f;				//加速度設定
-					}
+				//ノーマルマリオだと
+				if ( Player.PlayerState == 1 ) {
+					if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
+						if ( Player.PSpeed < 6.0f ) {
+							Player.PSpeed += 0.2f;				//加速度設定
+						}
 
-					if ( Player.PlayerX < ( 8 * _MASS_X + _MASS_HALF ) && ( Player.MapScrollX + Player.PlayerX <= ( 200 * _MASS_X + _MASS_HALF ) ) ) {
-						Player.PlayerX += Player.PSpeed;
-					}
-					else if ( Player.PlayerX >= ( 8 * _MASS_X + _MASS_HALF ) ) {
-						Player.MapSSpeed = Player.PSpeed;
-						Player.MapScrollX += Player.MapSSpeed;
-					}
+						if ( Player.PlayerX < ( 8 * _MASS_X + _MASS_HALF ) && ( Player.MapScrollX + Player.PlayerX <= ( 200 * _MASS_X + _MASS_HALF ) ) ) {
+							Player.PlayerX += Player.PSpeed;
+						}
+						else if ( Player.PlayerX >= ( 8 * _MASS_X + _MASS_HALF ) ) {
+							Player.MapSSpeed = Player.PSpeed;
+							Player.MapScrollX += Player.MapSSpeed;
+						}
 				
-				} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
-					Player.PSpeed = 0.0f;
-					Player.MapSSpeed = 0;
-				} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
-					Player.GoalFlg = 1;
-					Player.PSpeed = 0.0f;
-					Player.MapSSpeed = 0;
-					Player.PJSpeed = 0;
-					JumpState = 0;
-					Player.JumpFrame = 0;
+					} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
+						Player.PSpeed = 0.0f;
+						Player.MapSSpeed = 0;
+					} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
+						Player.GoalFlg = 1;
+						Player.PSpeed = 0.0f;
+						Player.MapSSpeed = 0;
+						Player.PJSpeed = 0;
+						JumpState = 0;
+						Player.JumpFrame = 0;
+					}
+				}
+				//スーパーマリオ以上だと
+				else if ( Player.PlayerState == 2 || Player.PlayerState ) {
+					if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
+						if ( Player.PSpeed < 6.0f ) {
+							Player.PSpeed += 0.2f;				//加速度設定
+						}
+
+						if ( Player.PlayerX < ( 8 * _MASS_X + _MASS_HALF ) && ( Player.MapScrollX + Player.PlayerX <= ( 200 * _MASS_X + _MASS_HALF ) ) ) {
+							Player.PlayerX += Player.PSpeed;
+						}
+						else if ( Player.PlayerX >= ( 8 * _MASS_X + _MASS_HALF ) ) {
+							Player.MapSSpeed = Player.PSpeed;
+							Player.MapScrollX += Player.MapSSpeed;
+						}
+				
+					} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
+						Player.PSpeed = 0.0f;
+						Player.MapSSpeed = 0;
+					} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
+						Player.GoalFlg = 1;
+						Player.PSpeed = 0.0f;
+						Player.MapSSpeed = 0;
+						Player.PJSpeed = 0;
+						JumpState = 0;
+						Player.JumpFrame = 0;
+					}
 				}
 			}
 			Player.P_lr_f = _DIRECT_RIGHT;					//左右反転フラグ
-			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, FALSE );		//歩行時のプレイヤー描画
+			//歩行時のプレイヤー描画
+			if ( Player.PlayerState == 1 ) {									//ノーマルマリオ
+				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, FALSE );		
+			}
+			else if ( Player.PlayerState == 2 ) {								//スーパーマリオ
+				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_WalkS[Player.P_i_f], TRUE, FALSE );		
+			}
+			else if ( Player.PlayerState == 3 ) {								//ファイヤーマリオ
+				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_WalkF[Player.P_i_f], TRUE, FALSE );	
+			}
 		}
 		/** 急ブレーキの処理 **/
 		if ( PDrawMode == 2 && Player.PSpeed > 0.0f ) {
 			Player.P_lr_f=0;					//左右反転フラグ
 			SlideMode = 1;
 			if ( Player.PlayerAnime == 0 ) {
-				if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
-					Player.PSpeed -= 0.4f;
-					if ( ( Player.PlayerX -= Player.PSpeed ) < ( 0 * _MASS_X + _MASS_HALF ) ) {
-						Player.PlayerX += Player.PSpeed;
+				//ノーマルマリオだと
+				if ( Player.PlayerState == 1 ) {
+					if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
+						Player.PSpeed -= 0.4f;
+						if ( ( Player.PlayerX -= Player.PSpeed ) < ( 0 * _MASS_X + _MASS_HALF ) ) {
+							Player.PlayerX += Player.PSpeed;
+							Player.PSpeed = 0.0f;
+							Player.MapSSpeed = 0;
+						}
+					} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
 						Player.PSpeed = 0.0f;
 						Player.MapSSpeed = 0;
+					} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
+						GAMESTATE = GAME_GOAL;
 					}
-				} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
-					Player.PSpeed = 0.0f;
-					Player.MapSSpeed = 0;
-				} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
-					GAMESTATE = GAME_GOAL;
+					if ( Player.PSpeed <= 0.0f ) {
+						Player.PSpeed = 0.0f;
+						Player.MapSSpeed = 0;
+						PDrawMode = 1;
+					}
 				}
-				if ( Player.PSpeed <= 0.0f ) {
-					Player.PSpeed = 0.0f;
-					Player.MapSSpeed = 0;
-					PDrawMode = 1;
+				//スーパーマリオ以上だと
+				else if ( Player.PlayerState == 2 || Player.PlayerState == 3 ) {
+					if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
+						Player.PSpeed -= 0.4f;
+						if ( ( Player.PlayerX -= Player.PSpeed ) < ( 0 * _MASS_X + _MASS_HALF ) ) {
+							Player.PlayerX += Player.PSpeed;
+							Player.PSpeed = 0.0f;
+							Player.MapSSpeed = 0;
+						}
+					} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
+						Player.PSpeed = 0.0f;
+						Player.MapSSpeed = 0;
+					} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
+						GAMESTATE = GAME_GOAL;
+					}
+					if ( Player.PSpeed <= 0.0f ) {
+						Player.PSpeed = 0.0f;
+						Player.MapSSpeed = 0;
+						PDrawMode = 1;
+					}
 				}
 			}
-			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[ 6 ], TRUE, FALSE );
+			//プレイヤー描画
+			if ( Player.PlayerState == 1 ) {									//ノーマルマリオ
+				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[ 6 ], TRUE, FALSE );
+			}
+			else if ( Player.PlayerState == 2 ) {								//スーパーマリオ
+				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Suplayer[ 7 ], TRUE, FALSE );
+			}
+			else if ( Player.PlayerState == 3 ) {								//ファイヤーマリオ
+				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.FirePlayer[ 7 ], TRUE, FALSE );
+			}
 		}
 	}
 	/*****     左移動処理     *****/
@@ -750,20 +825,46 @@ void DrawPlayer() {
 		if ( PDrawMode == 2 ) {
 			InMode = 2;
 			if ( Player.PlayerAnime == 0 ) {
-				if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
-					if ( Player.PSpeed < 6.0f ) {
-						Player.PSpeed += 0.2f;			//加速度設定
+				//ノーマルマリオ処理
+				if ( Player.PlayerState == 1 ) {
+					if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
+						if ( Player.PSpeed < 6.0f ) {
+							Player.PSpeed += 0.2f;			//加速度設定
+						}
+						Player.PlayerX -= Player.PSpeed;
+					} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
+						Player.PSpeed = 0.0f;
+						Player.MapSSpeed = 0;
+					} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
+						GAMESTATE = GAME_GOAL;
 					}
-					Player.PlayerX -= Player.PSpeed;
-				} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
-					Player.PSpeed = 0.0f;
-					Player.MapSSpeed = 0;
-				} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
-					GAMESTATE = GAME_GOAL;
+				}
+				//スーパーマリオ以上処理
+				else if ( Player.PlayerState == 2 || Player.PlayerState == 3 ) {
+					if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
+						if ( Player.PSpeed < 6.0f ) {
+							Player.PSpeed += 0.2f;			//加速度設定
+						}
+						Player.PlayerX -= Player.PSpeed;
+					} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
+						Player.PSpeed = 0.0f;
+						Player.MapSSpeed = 0;
+					} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
+						GAMESTATE = GAME_GOAL;
+					}
 				}
 			}
 			Player.P_lr_f = _DIRECT_LEFT;					//左右反転フラグ
-			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, TRUE );			//歩行時のプレイヤー描画
+			//プレイヤー描画
+			if ( Player.PlayerState == 1 ) {
+				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, TRUE );			//歩行時のプレイヤー描画
+			} 
+			else if ( Player.PlayerState == 2 ) {
+				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_WalkS[Player.P_i_f], TRUE, TRUE );			//歩行時のプレイヤー描画
+			}
+			else if ( Player.PlayerState == 3 ) {
+				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_WalkF[Player.P_i_f], TRUE, TRUE );			//歩行時のプレイヤー描画
+			}
 		}
 		/** 急ブレーキの処理 **/
 		if ( PDrawMode == 1 && Player.PSpeed > 0.0f ) {
@@ -771,33 +872,72 @@ void DrawPlayer() {
 			InMode2 = 2;
 			Player.P_lr_f=1;					//左右反転フラグ
 			if ( Player.PlayerAnime == 0 ) {
-				if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
-					Player.PSpeed -= 0.4f;
-					if ( Player.PlayerX < ( 8 * _MASS_X + _MASS_HALF ) && ( Player.MapScrollX + Player.PlayerX < ( 200 * _MASS_X + _MASS_HALF ) ) ) {
-						Player.PlayerX += Player.PSpeed;
+				//ノーマルマリオ処理
+				if ( Player.PlayerState == 1 ) {
+					if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
+						Player.PSpeed -= 0.4f;
+						if ( Player.PlayerX < ( 8 * _MASS_X + _MASS_HALF ) && ( Player.MapScrollX + Player.PlayerX < ( 200 * _MASS_X + _MASS_HALF ) ) ) {
+							Player.PlayerX += Player.PSpeed;
+						}
+						else if ( Player.PlayerX >= ( 8 * _MASS_X + _MASS_HALF ) ) {
+							Player.MapSSpeed = Player.PSpeed;
+							Player.MapScrollX += Player.MapSSpeed;
+						}
+					} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
+						Player.PSpeed = 0.0f;
+						Player.MapSSpeed = 0;
+					} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
+						Player.GoalFlg = 1;
+						Player.PSpeed = 0.0f;
+						Player.MapSSpeed = 0;
+						Player.PJSpeed = 0;
+						JumpState = 0;
+						Player.JumpFrame = 0;
 					}
-					else if ( Player.PlayerX >= ( 8 * _MASS_X + _MASS_HALF ) ) {
-						Player.MapSSpeed = Player.PSpeed;
-						Player.MapScrollX += Player.MapSSpeed;
+					if ( Player.PSpeed <= 0.0f )	{
+						Player.PSpeed = 0.0f;
+						Player.MapSSpeed = 0;
+						PDrawMode = 2;
 					}
-				} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
-					Player.PSpeed = 0.0f;
-					Player.MapSSpeed = 0;
-				} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
-					Player.GoalFlg = 1;
-					Player.PSpeed = 0.0f;
-					Player.MapSSpeed = 0;
-					Player.PJSpeed = 0;
-					JumpState = 0;
-					Player.JumpFrame = 0;
 				}
-				if ( Player.PSpeed <= 0.0f )	{
-					Player.PSpeed = 0.0f;
-					Player.MapSSpeed = 0;
-					PDrawMode = 2;
+				//スーパーマリオ以上処理
+				else if ( Player.PlayerState == 2 || Player.PlayerState == 3 ) {
+						if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
+						Player.PSpeed -= 0.4f;
+						if ( Player.PlayerX < ( 8 * _MASS_X + _MASS_HALF ) && ( Player.MapScrollX + Player.PlayerX < ( 200 * _MASS_X + _MASS_HALF ) ) ) {
+							Player.PlayerX += Player.PSpeed;
+						}
+						else if ( Player.PlayerX >= ( 8 * _MASS_X + _MASS_HALF ) ) {
+							Player.MapSSpeed = Player.PSpeed;
+							Player.MapScrollX += Player.MapSSpeed;
+						}
+					} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
+						Player.PSpeed = 0.0f;
+						Player.MapSSpeed = 0;
+					} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
+						Player.GoalFlg = 1;
+						Player.PSpeed = 0.0f;
+						Player.MapSSpeed = 0;
+						Player.PJSpeed = 0;
+						JumpState = 0;
+						Player.JumpFrame = 0;
+					}
+					if ( Player.PSpeed <= 0.0f )	{
+						Player.PSpeed = 0.0f;
+						Player.MapSSpeed = 0;
+						PDrawMode = 2;
+					}
 				}
 			}
-			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[ 6 ], TRUE, TRUE );
+			if ( Player.PlayerState == 1 ) {
+				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[ 6 ], TRUE, TRUE );
+			} 
+			else if ( Player.PlayerState == 2 ) {
+				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Suplayer[ 7 ], TRUE, TRUE );
+			}
+			else if ( Player.PlayerState == 3 ) {
+				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.FirePlayer[ 7 ], TRUE, TRUE );
+			}
 		}
 	}
 	/*****  その他処理   *****/
@@ -809,41 +949,88 @@ void DrawPlayer() {
 				if ( Player.PSpeed > 0.0f ) {
 					//右処理
 					if ( PDrawMode == 1 && ( Player.PlayerX < 15 * _MASS_X + _MASS_HALF ) ) { 
-						if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
-							if ( Player.PlayerX < ( 8 * _MASS_X + _MASS_HALF ) && ( Player.MapScrollX + Player.PlayerX <= ( 200 * _MASS_X + _MASS_HALF ) ) ) {
-								Player.PlayerX += Player.PSpeed;
+						//ノーマルマリオ処理
+						if ( Player.PlayerState == 1 ) {
+							if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
+								if ( Player.PlayerX < ( 8 * _MASS_X + _MASS_HALF ) && ( Player.MapScrollX + Player.PlayerX <= ( 200 * _MASS_X + _MASS_HALF ) ) ) {
+									Player.PlayerX += Player.PSpeed;
+								}
+								else if ( Player.PlayerX >= ( 8 * _MASS_X + _MASS_HALF ) ) {
+									Player.MapSSpeed = Player.PSpeed;
+									Player.MapScrollX += Player.MapSSpeed;
+								}
+							} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
+								Player.PSpeed = 0.0f;
+								Player.MapSSpeed = 0;
+							} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
+								Player.GoalFlg = 1;
+								Player.PSpeed = 0.0f;
+								Player.MapSSpeed = 0;
+								Player.PJSpeed = 0;
+								JumpState = 0;
+								Player.JumpFrame = 0;
 							}
-							else if ( Player.PlayerX >= ( 8 * _MASS_X + _MASS_HALF ) ) {
-								Player.MapSSpeed = Player.PSpeed;
-								Player.MapScrollX += Player.MapSSpeed;
-							}
-						} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
-							Player.PSpeed = 0.0f;
-							Player.MapSSpeed = 0;
-						} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
-							Player.GoalFlg = 1;
-							Player.PSpeed = 0.0f;
-							Player.MapSSpeed = 0;
-							Player.PJSpeed = 0;
-							JumpState = 0;
-							Player.JumpFrame = 0;
 						}
-						InMode2 = 3;
+						//スーパーマリオ以上処理
+						else if ( Player.PlayerState == 2 || Player.PlayerState == 3 ) {
+							if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
+								if ( Player.PlayerX < ( 8 * _MASS_X + _MASS_HALF ) && ( Player.MapScrollX + Player.PlayerX <= ( 200 * _MASS_X + _MASS_HALF ) ) ) {
+									Player.PlayerX += Player.PSpeed;
+								}
+								else if ( Player.PlayerX >= ( 8 * _MASS_X + _MASS_HALF ) ) {
+									Player.MapSSpeed = Player.PSpeed;
+									Player.MapScrollX += Player.MapSSpeed;
+								}
+							} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
+								Player.PSpeed = 0.0f;
+								Player.MapSSpeed = 0;
+							} else if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
+								Player.GoalFlg = 1;
+								Player.PSpeed = 0.0f;
+								Player.MapSSpeed = 0;
+								Player.PJSpeed = 0;
+								JumpState = 0;
+								Player.JumpFrame = 0;
+							}
+						}
 					} 
 					//左処理
 					else if ( PDrawMode == 2 && ( Player.PlayerX > 0 * _MASS_X + _MASS_HALF ) ) {
-						if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
-							Player.PlayerX -= Player.PSpeed;
-						} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
-							Player.PSpeed = 0.0f;
-							Player.MapSSpeed = 0;
-						} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
-							GAMESTATE = GAME_GOAL;
+						//ノーマルマリオ処理
+						if ( Player.PlayerState == 1 ) {
+							if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
+								Player.PlayerX -= Player.PSpeed;
+							} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
+								Player.PSpeed = 0.0f;
+								Player.MapSSpeed = 0;
+							} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
+								GAMESTATE = GAME_GOAL;
+							}
+						}
+						//スーパーマリオ以上処理
+						else if ( Player.PlayerState == 2 || Player.PlayerState == 3 ) {
+							if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
+								Player.PlayerX -= Player.PSpeed;
+							} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
+								Player.PSpeed = 0.0f;
+								Player.MapSSpeed = 0;
+							} else if ( HitBlockLeft( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_GOAL ) {
+								GAMESTATE = GAME_GOAL;
+							}
 						}
 					}
 				}
 			}
-			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[ Player.P_i_f ], TRUE , Player.P_lr_f );
+			//プレイヤー描画
+			if ( Player.PlayerState == 1 ) {				//ノーマルマリオ
+				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[ Player.P_i_f ], TRUE , Player.P_lr_f );
+			}
+			else if ( Player.PlayerState == 2 ) {			//スーパーマリオ
+				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Suplayer[ Player.P_i_f ], TRUE , Player.P_lr_f );
+			}
+			else if ( Player.PlayerState == 3 ) {			//ファイヤーマリオ
+				DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.FirePlayer[ Player.P_i_f ], TRUE , Player.P_lr_f );
+			}
 		}
 		if ( Player.PSpeed <= 0.0f ) {
 			PDrawMode = 0;
@@ -863,36 +1050,45 @@ void DrawPlayer() {
 	
 	if ( Player.PlayerAnime == 0 ) {
 		if ( Player.JumpMode == TRUE ) {
-
-			//上方向のブロックの当たり判定
-			if ( HitBlockUp( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {			
-				//真ん中にヒットする場合
-				//map[ ( ( Player.PlayerY-_MASS_HALF ) /32 ) ][ ( ( Player.MapScrollX + Player.PlayerX )/32 ) ].BU_F=1;
-				Player.PJSpeed = 0.0f;
-				Player.JumpMode = FALSE;
-				Player.JumpFrame = 0;
-			} else if ( HitBlockUp( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_LEFT ) {	
-				//(マリオの)左側に当たった時
-				int Difference = 0;
-				Difference = map[ ( Player.PlayerY-_MASS_HALF+4 )/32][ ( ( Player.MapScrollX+Player.PlayerX )+_MASS_HALF-4 )/32 ].CoX -
-								( ( Player.PlayerX ) - _MASS_HALF + 4 );
-				Player.PlayerX += Difference;
-			} else if ( HitBlockUp( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_RIGHT ) {	
-				//(マリオの)左側に当たった時
-				int Difference = 0;
-				Difference = ( ( Player.PlayerX )+_MASS_HALF-4 ) - 
-							map[ ( Player.PlayerY-_MASS_HALF+4 )/32 ][ ( ( Player.MapScrollX+Player.PlayerX )+_MASS_HALF-4 )/32 ].CoX;
-				Player.PlayerX -= Difference;
-			} else if ( HitBlockUp( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {	
-				//ヒットしない場合
-				if ( Player.JumpFrame++ < 6 ) {
-					if ( ( opt.NowK & PAD_INPUT_M ) == 0 ) {
-						JumpState = 3;
-					}
-				} else if ( Player.JumpFrame >= 6 && Player.JumpFrame < 18 ) {
-					if ( opt.NowK & PAD_INPUT_M ) {
-						if ( JumpState != 3 )	Player.PJSpeed =  8.0f;
-					} else if ( ( opt.NowK & PAD_INPUT_M ) == 0 ) { 
+			if ( Player.PlayerState == 1 ) {
+				//上方向のブロックの当たり判定
+				if ( HitBlockUp( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {			
+					//真ん中にヒットする場合
+					Player.PJSpeed = 0.0f;
+					Player.JumpMode = FALSE;
+					Player.JumpFrame = 0;
+				} else if ( HitBlockUp( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_LEFT ) {	
+					//(マリオの)左側に当たった時
+					int Difference = 0;
+					Difference = map[ ( Player.PlayerY-_MASS_HALF+4 )/32][ ( ( Player.MapScrollX+Player.PlayerX )+_MASS_HALF-4 )/32 ].CoX -
+									( ( Player.PlayerX ) - _MASS_HALF + 4 );
+					Player.PlayerX += Difference;
+				} else if ( HitBlockUp( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_RIGHT ) {	
+					//(マリオの)左側に当たった時
+					int Difference = 0;
+					Difference = ( ( Player.PlayerX )+_MASS_HALF-4 ) - 
+								map[ ( Player.PlayerY-_MASS_HALF+4 )/32 ][ ( ( Player.MapScrollX+Player.PlayerX )+_MASS_HALF-4 )/32 ].CoX;
+					Player.PlayerX -= Difference;
+				} else if ( HitBlockUp( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {	
+					//ヒットしない場合
+					if ( Player.JumpFrame++ < 6 ) {
+						if ( ( opt.NowK & PAD_INPUT_M ) == 0 ) {
+							JumpState = 3;
+						}
+					} else if ( Player.JumpFrame >= 6 && Player.JumpFrame < 18 ) {
+						if ( opt.NowK & PAD_INPUT_M ) {
+							if ( JumpState != 3 )	Player.PJSpeed =  8.0f;
+						} else if ( ( opt.NowK & PAD_INPUT_M ) == 0 ) { 
+							if ( Player.PJSpeed > 0.0f ) {
+								Player.PJSpeed -= 0.4f;
+							} else if ( Player.PJSpeed <= 0.0f ) {
+								Player.PJSpeed = 0.0f;
+								Player.JumpMode = FALSE;
+								Player.JumpFrame = 0;
+							}
+							JumpState = 3;
+						}
+					} else if ( Player.JumpFrame >= 18 ) {
 						if ( Player.PJSpeed > 0.0f ) {
 							Player.PJSpeed -= 0.4f;
 						} else if ( Player.PJSpeed <= 0.0f ) {
@@ -900,56 +1096,149 @@ void DrawPlayer() {
 							Player.JumpMode = FALSE;
 							Player.JumpFrame = 0;
 						}
-						JumpState = 3;
-					}
-				} else if ( Player.JumpFrame >= 18 ) {
-					if ( Player.PJSpeed > 0.0f ) {
-						Player.PJSpeed -= 0.4f;
-					} else if ( Player.PJSpeed <= 0.0f ) {
-						Player.PJSpeed = 0.0f;
-						Player.JumpMode = FALSE;
-						Player.JumpFrame = 0;
-					}
-				} 
-				Player.PlayerY -= Player.PJSpeed;
+					} 
+					Player.PlayerY -= Player.PJSpeed;
+				}
+			}
+			else if ( Player.PlayerState == 2 || Player.PlayerState == 3 ) {
+				//上方向のブロックの当たり判定
+				if ( HitBlockUp( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {			
+					//真ん中にヒットする場合
+					Player.PJSpeed = 0.0f;
+					Player.JumpMode = FALSE;
+					Player.JumpFrame = 0;
+				} else if ( HitBlockUp( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_LEFT ) {	
+					//(マリオの)左側に当たった時
+					int Difference = 0;
+					Difference = map[ ( Player.PlayerY-_MASS_HALF+4 )/32][ ( ( Player.MapScrollX+Player.PlayerX )+_MASS_HALF-4 )/32 ].CoX -
+									( ( Player.PlayerX ) - _MASS_HALF + 4 );
+					Player.PlayerX += Difference;
+				} else if ( HitBlockUp( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_RIGHT ) {	
+					//(マリオの)左側に当たった時
+					int Difference = 0;
+					Difference = ( ( Player.PlayerX )+_MASS_HALF-4 ) - 
+								map[ ( Player.PlayerY-_MASS_HALF+4 )/32 ][ ( ( Player.MapScrollX+Player.PlayerX )+_MASS_HALF-4 )/32 ].CoX;
+					Player.PlayerX -= Difference;
+				} else if ( HitBlockUp( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {	
+					//ヒットしない場合
+					if ( Player.JumpFrame++ < 6 ) {
+						if ( ( opt.NowK & PAD_INPUT_M ) == 0 ) {
+							JumpState = 3;
+						}
+					} else if ( Player.JumpFrame >= 6 && Player.JumpFrame < 18 ) {
+						if ( opt.NowK & PAD_INPUT_M ) {
+							if ( JumpState != 3 )	Player.PJSpeed =  8.0f;
+						} else if ( ( opt.NowK & PAD_INPUT_M ) == 0 ) { 
+							if ( Player.PJSpeed > 0.0f ) {
+								Player.PJSpeed -= 0.4f;
+							} else if ( Player.PJSpeed <= 0.0f ) {
+								Player.PJSpeed = 0.0f;
+								Player.JumpMode = FALSE;
+								Player.JumpFrame = 0;
+							}
+							JumpState = 3;
+						}
+					} else if ( Player.JumpFrame >= 18 ) {
+						if ( Player.PJSpeed > 0.0f ) {
+							Player.PJSpeed -= 0.4f;
+						} else if ( Player.PJSpeed <= 0.0f ) {
+							Player.PJSpeed = 0.0f;
+							Player.JumpMode = FALSE;
+							Player.JumpFrame = 0;
+						}
+					} 
+					Player.PlayerY -= Player.PJSpeed;
+				}
 			}
 
 		} else if ( JumpState == 2 && Player.JumpMode == FALSE ) {
 			JumpState = 3;
 		}
 	}
+
+	/*****     落下処理     *****/
 	if ( Player.PlayerAnime == 0 ) {
-		/*****     落下処理     *****/
-		if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && Player.JumpMode == FALSE && HitBlockDown( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
-			JumpState = 4;
-			if ( Player.PYSpeed < 8.0f )	Player.PYSpeed += 0.8f;
-			Player.PlayerY += ( int )Player.PYSpeed;
-			//めり込み防止処理
-			if ( HitBlockDown( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
-				int Difference = 0;
-				Difference = ( Player.PlayerY + _MASS_HALF ) - map[ ( Player.PlayerY / 32 ) + 1 ][ ( Player.MapScrollX + Player.PlayerX )/32 ].CoY;
-				Player.PlayerY -= Difference;
+
+		//ノーマルマリオ処理
+		if ( Player.PlayerState == 1 ) {
+			if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && Player.JumpMode == FALSE && HitBlockDown( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
+				JumpState = 4;
+				if ( Player.PYSpeed < 8.0f )	Player.PYSpeed += 0.8f;
+				Player.PlayerY += ( int )Player.PYSpeed;
+				//めり込み防止処理
+				if ( HitBlockDown( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
+					int Difference = 0;
+					Difference = ( Player.PlayerY + _MASS_HALF ) - map[ ( Player.PlayerY / 32 ) + 1 ][ ( Player.MapScrollX + Player.PlayerX )/32 ].CoY;
+					Player.PlayerY -= Difference;
+					Player.PYSpeed = 0.0f;
+				}
+			} 
+			else if ( Player.JumpMode == FALSE && HitBlockDown( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
+				if ( JumpState == 3 && ( opt.NowK & PAD_INPUT_M ) == 0 ) {
+					JumpState = 0;
+				}
+				if ( JumpState == 4 && ( opt.NowK & PAD_INPUT_M ) == 0 ) {
+					JumpState = 0;
+				}
+			}
+			else {
 				Player.PYSpeed = 0.0f;
 			}
-		} 
-		else if ( Player.JumpMode == FALSE && HitBlockDown( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
-			if ( JumpState == 3 && ( opt.NowK & PAD_INPUT_M ) == 0 ) {
-				JumpState = 0;
+		}
+		//スーパーマリオ以上処理
+		else if ( Player.PlayerState == 2 || Player.PlayerState == 3 ) {
+			if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && Player.JumpMode == FALSE && HitBlockDown( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_FALSE ) {
+				JumpState = 4;
+				if ( Player.PYSpeed < 8.0f )	Player.PYSpeed += 0.8f;
+				Player.PlayerY += ( int )Player.PYSpeed;
+				//めり込み防止処理
+				if ( HitBlockDown( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
+					int Difference = 0;
+					Difference = ( Player.PlayerY + _MASS_Y ) - map[ ( Player.PlayerY / 32 ) + 1 ][ ( Player.MapScrollX + Player.PlayerX )/32 ].CoY;
+					Player.PlayerY -= Difference;
+					Player.PYSpeed = 0.0f;
+				}
+			} 
+			else if ( Player.JumpMode == FALSE && HitBlockDown( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_TRUE ) {
+				if ( JumpState == 3 && ( opt.NowK & PAD_INPUT_M ) == 0 ) {
+					JumpState = 0;
+				}
+				if ( JumpState == 4 && ( opt.NowK & PAD_INPUT_M ) == 0 ) {
+					JumpState = 0;
+				}
 			}
-			if ( JumpState == 4 && ( opt.NowK & PAD_INPUT_M ) == 0 ) {
-				JumpState = 0;
+			else {
+				Player.PYSpeed = 0.0f;
 			}
 		}
-		else {
-			Player.PYSpeed = 0.0f;
+	}
+
+	//パワーアップアニメーション
+	if ( Player.PlayerAnime == 1 ) {
+		if ( Player.PAnimeFrame++ < 1 ) {
+			if ( Player.PlayerState == 2 ) {
+				Player.PlayerY -= _MASS_HALF;
+			}
+		}
+		else if ( Player.PAnimeFrame > 90 ) {
+			Player.PlayerAnime = 0;
 		}
 	}
 
 	//ゴールアニメーション
 	static int pg_walk;
 	if ( Player.GoalFlg == 1 ) {
-		if ( HitBlockDown( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) != _HIT_TRUE ) {
-			Player.PlayerY += 3;
+		//ノーマルマリオ処理
+		if ( Player.PlayerState == 1 ) {
+			if ( HitBlockDown( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) != _HIT_TRUE ) {
+				Player.PlayerY += 3;
+			}
+		}
+		//スーパーマリオ以上処理
+		else if ( Player.PlayerState == 2 || Player.PlayerState == 3 ) {
+			if ( HitBlockDown( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) != _HIT_TRUE ) {
+				Player.PlayerY += 3;
+			}
 		}
 	} else if ( Player.GoalFlg == 2 ) {
 		static int i = 0;
@@ -960,8 +1249,6 @@ void DrawPlayer() {
 			Player.GoalFlg = 3;
 		}
 	} else if ( Player.GoalFlg == 3 ) {
-		//GAMESTATE = GAME_GOAL;
-	
 		Player.PlayerX+=3;
 		if(FR_Control.FrameCount%3){
 			switch(pg_walk){
@@ -979,9 +1266,19 @@ void DrawPlayer() {
 					break;
 			}
 		}
-		if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_CASTLE ){
-			Player.GoalFlg=4;
-			GAMESTATE=GAME_GOAL;
+		//ノーマルマリオ処理
+		if ( Player.PlayerState == 1 ) {
+			if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_HALF, FALSE, _HITW_PLAYER ) == _HIT_CASTLE ){
+				Player.GoalFlg=4;
+				GAMESTATE=GAME_GOAL;
+			}
+		}
+		//スーパーマリオ以上処理
+		else if ( Player.PlayerState == 2 || Player.PlayerState == 3 ) {
+			if ( HitBlockRight( Player.MapScrollX + Player.PlayerX, Player.PlayerY, _MASS_HALF, _MASS_Y, FALSE, _HITW_PLAYER ) == _HIT_CASTLE ){
+				Player.GoalFlg=4;
+				GAMESTATE=GAME_GOAL;
+			}
 		}
 	}
 
@@ -990,30 +1287,50 @@ void DrawPlayer() {
 		if(i==8)i=7;
 		else if(i==7)i=8;
 	}
-	if ( Player.GoalFlg == 1 ) {
-	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[i], TRUE, FALSE );			//ゴールした時
-	} else if ( Player.GoalFlg == 2 ) {
-		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[7], TRUE, TRUE );			//ゴールした(一番下に降りた)とき(反転)
+
+	//ゴール画像描画
+	if ( Player.PlayerState == 1 ) {			//ノーマルマリオ
+		if ( Player.GoalFlg == 1 ) {
+			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[i], TRUE, FALSE );			//ゴールした時
+		} else if ( Player.GoalFlg == 2 ) {
+			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[7], TRUE, TRUE );			//ゴールした(一番下に降りた)とき(反転)
+		}
 	}
-	
-	//プレイヤーが大きくなる処理
-	//else if ( Player.PlayerAnime == 1 ) {
-	//	if ( Player.PAnimeFrame++ > 90 ) {
-	//		Player.PlayerAnime = 0;
-	//	}
-	//}
+	else if ( Player.PlayerState == 2 ) {		//スーパーマリオ
+		if ( Player.GoalFlg == 1 ) {
+			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Suplayer[i], TRUE, FALSE );			//ゴールした時
+		} else if ( Player.GoalFlg == 2 ) {
+			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Suplayer[7], TRUE, TRUE );			//ゴールした(一番下に降りた)とき(反転)
+		}
+	}
+	else if ( Player.PlayerState == 3 ) {		//ファイヤーマリオ
+		if ( Player.GoalFlg == 1 ) {
+			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.FirePlayer[i], TRUE, FALSE );			//ゴールした時
+		} else if ( Player.GoalFlg == 2 ) {
+			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.FirePlayer[7], TRUE, TRUE );			//ゴールした(一番下に降りた)とき(反転)
+		}
+	}
 
 	//プレイヤー描画
-	//if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 1 || PDrawMode == 2 ) && Player.JumpMode == 0 && SlideMode == 0 )
-	//	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[Player.P_i_f], TRUE, Player.P_lr_f );	//普通歩行での描画
-	//if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 1 || PDrawMode == 2 ) && Player.JumpMode == 0 && SlideMode == 1 )
-	//	DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[6], TRUE, FALSE );	//普通歩行での描画
-	//if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 1 || PDrawMode == 2 ) && Player.JumpMode == 0 && SlideMode == 2 )
-		//DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.P_Walk[6], TRUE, TRUE );	//普通歩行での描画
-	if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpMode == 0 )	
-		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[0], TRUE , Player.P_lr_f );	//ジャンプしてないとき
-	if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpMode != 0 )	
-		DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[4], TRUE , Player.P_lr_f );	//ジャンプした時
+	if ( Player.PlayerState == 1 ) {
+		if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpMode == 0 )	
+			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[0], TRUE , Player.P_lr_f );	//ジャンプしてないとき
+		if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpMode != 0 )	
+			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Player[4], TRUE , Player.P_lr_f );	//ジャンプした時
+	}
+	else if ( Player.PlayerState == 2 ) {
+		if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpMode == 0 )	
+			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Suplayer[0], TRUE , Player.P_lr_f );	//ジャンプしてないとき
+		if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpMode != 0 )	
+			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.Suplayer[4], TRUE , Player.P_lr_f );	//ジャンプした時
+	}
+	else if ( Player.PlayerState == 3 ) {
+		if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpMode == 0 )	
+			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.FirePlayer[0], TRUE , Player.P_lr_f );	//ジャンプしてないとき
+		if ( ( Player.GoalFlg == 0 || Player.GoalFlg == 3 ) && ( PDrawMode == 3 || PDrawMode == 0 ) && Player.JumpMode != 0 )	
+			DrawRotaGraph( Player.PlayerX, Player.PlayerY, 1.0f, 0, Pic.FirePlayer[4], TRUE , Player.P_lr_f );	//ジャンプした時
+	}
+
 #ifdef _DEBUGMODE
 	SetFontSize( 12 );
 	DrawFormatString( 420,  50, 0xff0000, "OldK = %d", opt.OldK );				//OldK描画
@@ -1046,11 +1363,23 @@ int LoadImages() {
 	if ( LoadDivGraph( "images/mario_chara.png", 15, 5, 3, 32, 32, Pic.Player ) == -1 )			return -1;
 	//スーパーマリオ読み込み
 	if ( LoadDivGraph( "images/super_mario_chara.png", 15, 5, 3, 32, 64, Pic.Suplayer ) == -1 )	return -1;
+	//ファイヤーマリオ読み込み
+	if ( LoadDivGraph( "images/fire_mario_chara .png", 15, 5, 3, 32, 64, Pic.FirePlayer ) == -1 )	return -1;
 
 	Pic.P_Walk[0]=Pic.Player[1];
 	Pic.P_Walk[1]=Pic.Player[2];
 	Pic.P_Walk[2]=Pic.Player[3];
 	Pic.P_Walk[3]=Pic.Player[4];
+
+	Pic.P_WalkS[ 0 ] = Pic.Suplayer[ 1 ];
+	Pic.P_WalkS[ 1 ] = Pic.Suplayer[ 2 ];
+	Pic.P_WalkS[ 2 ] = Pic.Suplayer[ 3 ];
+	Pic.P_WalkS[ 3 ] = Pic.Suplayer[ 4 ];
+
+	Pic.P_WalkF[ 0 ] = Pic.FirePlayer[ 1 ];
+	Pic.P_WalkF[ 1 ] = Pic.FirePlayer[ 2 ];
+	Pic.P_WalkF[ 2 ] = Pic.FirePlayer[ 3 ];
+	Pic.P_WalkF[ 3 ] = Pic.FirePlayer[ 4 ];
 
 	return TRUE;
 }
